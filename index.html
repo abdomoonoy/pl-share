@@ -10,7 +10,7 @@
     .card { text-align: center; padding: 24px; background: #1a1f2c; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-width: 85%; }
     .spinner { border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid #00ff85; border-radius: 50%; width: 36px; height: 36px; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    p { margin: 0; font-size: 14px; color: #a0aec0; word-break: break-word; }
+    p { margin: 0; font-size: 14px; color: #a0aec0; word-break: break-word; line-height: 1.5; }
   </style>
 </head>
 <body>
@@ -24,7 +24,11 @@
     const DEFAULT_LOGO = "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png";
 
     async function initShare() {
+      const msgEl = document.getElementById("msg");
+      const loaderEl = document.getElementById("loader");
+
       try {
+        // 1. เริ่มการทำงานของ LIFF SDK
         await liff.init({ liffId: LIFF_ID });
         
         if (!liff.isLoggedIn()) {
@@ -32,28 +36,39 @@
           return;
         }
 
-        // ถอดรหัสพารามิเตอร์ทั้งจาก Query ปกติ และ liff.state
-        let rawQuery = window.location.search;
-        if (rawQuery.includes('liff.state=')) {
-          const stateVal = new URLSearchParams(rawQuery).get('liff.state');
-          if (stateVal) {
-            rawQuery = stateVal.startsWith('?') ? stateVal : '?' + stateVal;
-          }
+        // 2. ตรวจสอบสิทธิ์ Share Target Picker
+        if (!liff.isApiAvailable('shareTargetPicker')) {
+          loaderEl.style.display = "none";
+          msgEl.innerHTML = `<b style="color:#e74c3c;">ฟังก์ชันแชร์ยังไม่ถูกเปิดใช้งาน</b><br><small style="color:#cbd5e0;">กรุณาเปิดสวิตช์ Share Target Picker เป็น ON ใน LINE Developers Console</small>`;
+          return;
         }
 
-        const p = new URLSearchParams(rawQuery);
-        const title = p.get('t') || "MATCH UPDATE";
-        const color = p.get('c') ? ('#' + p.get('c')) : "#2c3e50";
-        const homeName = p.get('hn') || "Home Team";
-        const homeLogo = p.get('hl') || DEFAULT_LOGO;
-        const awayName = p.get('an') || "Away Team";
-        const awayLogo = p.get('al') || DEFAULT_LOGO;
-        const scoreH = p.get('sh') || "0";
-        const scoreA = p.get('sa') || "0";
-        const detail = p.get('dt') || "สรุปผลการแข่งขัน";
+        // 3. ดึงและถอดรหัสพารามิเตอร์
+        let searchStr = window.location.search;
+        if (!searchStr && window.location.hash.includes('?')) {
+          searchStr = '?' + window.location.hash.split('?')[1];
+        }
+
+        let params = new URLSearchParams(searchStr);
+        if (params.has('liff.state')) {
+          const stateStr = decodeURIComponent(params.get('liff.state'));
+          const stateQuery = stateStr.includes('?') ? stateStr.substring(stateStr.indexOf('?')) : ('?' + stateStr);
+          params = new URLSearchParams(stateQuery);
+        }
+
+        const title = params.get('t') || "MATCH UPDATE";
+        const color = params.get('c') ? ('#' + params.get('c').replace('#', '')) : "#2c3e50";
+        const homeName = params.get('hn') || "Home Team";
+        const homeLogo = params.get('hl') || DEFAULT_LOGO;
+        const awayName = params.get('an') || "Away Team";
+        const awayLogo = params.get('al') || DEFAULT_LOGO;
+        const scoreH = params.get('sh') || "0";
+        const scoreA = params.get('sa') || "0";
+        const detail = params.get('dt') || "สรุปผลการแข่งขัน";
 
         const centerText = scoreA !== "" ? `${scoreH} - ${scoreA}` : scoreH;
 
+        // 4. สร้างการ์ด Flex Message
         const flexObj = {
           "type": "bubble",
           "size": "kilo",
@@ -119,24 +134,23 @@
           }
         };
 
-        if (liff.isApiAvailable('shareTargetPicker')) {
-          const res = await liff.shareTargetPicker([
-            {
-              type: "flex",
-              altText: `แชร์ผลบอล: ${homeName} vs ${awayName}`,
-              contents: flexObj
-            }
-          ]);
-          if (res) {
-            liff.closeWindow();
+        // 5. เปิดหน้าต่างแชร์
+        const res = await liff.shareTargetPicker([
+          {
+            type: "flex",
+            altText: `แชร์ผลบอล: ${homeName} vs ${awayName}`,
+            contents: flexObj
           }
+        ]);
+
+        if (res) {
+          liff.closeWindow();
         } else {
-          document.getElementById("loader").style.display = "none";
-          document.getElementById("msg").innerText = "ฟังก์ชันแชร์ไม่พร้อมใช้งานในอุปกรณ์นี้";
+          liff.closeWindow();
         }
       } catch (err) {
-        document.getElementById("loader").style.display = "none";
-        document.getElementById("msg").innerText = "ข้อผิดพลาด: " + (err.message || JSON.stringify(err));
+        loaderEl.style.display = "none";
+        msgEl.innerHTML = `<b style="color:#e74c3c;">เกิดข้อผิดพลาด:</b><br><small style="color:#cbd5e0;">${err.message || JSON.stringify(err)}</small>`;
       }
     }
     initShare();
