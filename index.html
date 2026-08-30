@@ -7,40 +7,50 @@
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; height: 100vh; margin: 0; background: #0b0e14; color: #fff; }
-    .card { text-align: center; padding: 24px; background: #1a1f2c; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-width: 80%; }
+    .card { text-align: center; padding: 24px; background: #1a1f2c; border-radius: 16px; box-shadow: 0 4px 20px rgba(0,0,0,0.3); max-width: 85%; }
     .spinner { border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid #00ff85; border-radius: 50%; width: 36px; height: 36px; animation: spin 0.8s linear infinite; margin: 0 auto 16px; }
     @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
-    p { margin: 0; font-size: 14px; color: #a0aec0; }
+    p { margin: 0; font-size: 14px; color: #a0aec0; word-break: break-word; }
   </style>
 </head>
 <body>
   <div class="card">
-    <div class="spinner"></div>
+    <div class="spinner" id="loader"></div>
     <p id="msg">กำลังเปิดหน้าต่างส่งต่อการ์ด...</p>
   </div>
 
   <script>
-    // 🟢 LIFF ID ของคุณ
     const LIFF_ID = "2009210214-G4R7lVn9"; 
+    const DEFAULT_LOGO = "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png";
 
     async function initShare() {
       try {
         await liff.init({ liffId: LIFF_ID });
+        
         if (!liff.isLoggedIn()) {
           liff.login();
           return;
         }
 
-        const p = new URLSearchParams(window.location.search);
+        // ถอดรหัสพารามิเตอร์ทั้งจาก Query ปกติ และ liff.state
+        let rawQuery = window.location.search;
+        if (rawQuery.includes('liff.state=')) {
+          const stateVal = new URLSearchParams(rawQuery).get('liff.state');
+          if (stateVal) {
+            rawQuery = stateVal.startsWith('?') ? stateVal : '?' + stateVal;
+          }
+        }
+
+        const p = new URLSearchParams(rawQuery);
         const title = p.get('t') || "MATCH UPDATE";
         const color = p.get('c') ? ('#' + p.get('c')) : "#2c3e50";
-        const homeName = p.get('hn') || "";
-        const homeLogo = p.get('hl') || "";
-        const awayName = p.get('an') || "";
-        const awayLogo = p.get('al') || "";
-        const scoreH = p.get('sh') || "";
-        const scoreA = p.get('sa') || "";
-        const detail = p.get('dt') || "";
+        const homeName = p.get('hn') || "Home Team";
+        const homeLogo = p.get('hl') || DEFAULT_LOGO;
+        const awayName = p.get('an') || "Away Team";
+        const awayLogo = p.get('al') || DEFAULT_LOGO;
+        const scoreH = p.get('sh') || "0";
+        const scoreA = p.get('sa') || "0";
+        const detail = p.get('dt') || "สรุปผลการแข่งขัน";
 
         const centerText = scoreA !== "" ? `${scoreH} - ${scoreA}` : scoreH;
 
@@ -110,22 +120,23 @@
         };
 
         if (liff.isApiAvailable('shareTargetPicker')) {
-          await liff.shareTargetPicker([
+          const res = await liff.shareTargetPicker([
             {
               type: "flex",
               altText: `แชร์ผลบอล: ${homeName} vs ${awayName}`,
               contents: flexObj
             }
           ]);
-          liff.closeWindow();
+          if (res) {
+            liff.closeWindow();
+          }
         } else {
-          alert("อุปกรณ์ของคุณไม่รองรับการแชร์การ์ด");
-          liff.closeWindow();
+          document.getElementById("loader").style.display = "none";
+          document.getElementById("msg").innerText = "ฟังก์ชันแชร์ไม่พร้อมใช้งานในอุปกรณ์นี้";
         }
       } catch (err) {
-        console.error(err);
-        document.getElementById("msg").innerText = "เกิดข้อผิดพลาดในการแชร์";
-        setTimeout(() => liff.closeWindow(), 2500);
+        document.getElementById("loader").style.display = "none";
+        document.getElementById("msg").innerText = "ข้อผิดพลาด: " + (err.message || JSON.stringify(err));
       }
     }
     initShare();
