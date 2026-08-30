@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>แชร์ผลบอลพรีเมียร์ลีก</title>
+  <title>แชร์ผลบอล & ตารางคะแนน พรีเมียร์ลีก</title>
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     * { box-sizing: border-box; }
@@ -24,7 +24,7 @@
   <div class="card">
     <div id="preview-box">
       <div class="match-title" id="m-title">MATCH UPDATE</div>
-      <div class="teams">
+      <div class="teams" id="teams-box">
         <div class="team">
           <img id="m-hl" src="https://a.espncdn.com/i/leaguelogos/soccer/500/23.png">
           <span id="m-hn">Home</span>
@@ -36,7 +36,7 @@
         </div>
       </div>
       <button class="btn-share" id="btnShare" onclick="triggerShare()">
-        <span>📤 กดเพื่อส่งต่อการ์ด Flex</span>
+        <span id="btn-text">📤 กดเพื่อส่งต่อการ์ด Flex</span>
       </button>
     </div>
     <div id="status-msg">กำลังโหลดข้อมูล...</div>
@@ -46,7 +46,7 @@
     const LIFF_ID = "2011335665-i2smhkIR";
     const DEFAULT_LOGO = "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png";
     let flexPayload = null;
-    let homeName = "", awayName = "";
+    let shareAltText = "แชร์ข้อมูลพรีเมียร์ลีก";
 
     async function initPage() {
       const msg = document.getElementById("status-msg");
@@ -71,19 +71,33 @@
           params = new URLSearchParams(stateQuery);
         }
 
+        // กรณีแชร์ตารางคะแนน (Standings)
+        if (params.get('type') === 'standings') {
+          document.getElementById("m-title").innerText = "🏆 ตารางคะแนนพรีเมียร์ลีก";
+          document.getElementById("teams-box").style.display = "none";
+          document.getElementById("btn-text").innerText = "📤 กดเพื่อส่งต่อตารางคะแนน Flex";
+          shareAltText = "อัปเดตตารางคะแนนพรีเมียร์ลีกครบ 20 อันดับ";
+          
+          msg.innerText = "กำลังดึงข้อมูลตารางคะแนนล่าสุด...";
+          await buildStandingsFlex();
+          msg.innerText = "แตะที่ปุ่มสีเขียวด้านบนเพื่อเลือกเพื่อนหรือกลุ่มที่ต้องการส่งต่อ";
+          return;
+        }
+
+        // กรณีแชร์ผลบอล / พรีวิวแมตช์
         const title = params.get('t') || "MATCH UPDATE";
         const color = params.get('c') ? ('#' + params.get('c').replace('#', '')) : "#2c3e50";
-        homeName = params.get('hn') || "Home Team";
+        const homeName = params.get('hn') || "Home Team";
         const homeLogo = params.get('hl') || DEFAULT_LOGO;
-        awayName = params.get('an') || "Away Team";
+        const awayName = params.get('an') || "Away Team";
         const awayLogo = params.get('al') || DEFAULT_LOGO;
         const scoreH = params.get('sh') || "0";
         const scoreA = params.get('sa') || "0";
         const detail = params.get('dt') || "สรุปผลการแข่งขัน";
 
         const centerText = scoreA !== "" ? `${scoreH} - ${scoreA}` : scoreH;
+        shareAltText = `แชร์ผลบอล: ${homeName} vs ${awayName}`;
 
-        // อัปเดตหน้าแสดงผลบนเว็บ
         document.getElementById("m-title").innerText = title;
         document.getElementById("m-hn").innerText = homeName;
         document.getElementById("m-hl").src = homeLogo;
@@ -91,7 +105,6 @@
         document.getElementById("m-al").src = awayLogo;
         document.getElementById("m-score").innerText = centerText;
 
-        // ประกอบการ์ด Flex Message
         flexPayload = {
           "type": "bubble",
           "size": "kilo",
@@ -163,10 +176,102 @@
       }
     }
 
+    async function buildStandingsFlex() {
+      const res = await fetch("https://site.web.api.espn.com/apis/v2/sports/soccer/eng.1/standings");
+      const data = await res.json();
+      const entries = data.children[0].standings.entries;
+
+      const teams = entries.map((e, index) => {
+        const getStat = (name) => {
+          const s = (e.stats || []).find(st => st.name === name || st.type === name);
+          return s ? (s.displayValue || s.value) : "0";
+        };
+        return {
+          rank: (index + 1).toString(),
+          name: e.team.shortDisplayName || e.team.displayName || e.team.name,
+          logo: (e.team.logos && e.team.logos[0]) ? e.team.logos[0].href : DEFAULT_LOGO,
+          played: getStat("gamesPlayed"),
+          diff: getStat("pointDifferential") || getStat("goalDifference"),
+          points: getStat("points")
+        };
+      });
+
+      const top10 = teams.slice(0, 10);
+      const bottom10 = teams.slice(10, 20);
+
+      const card1 = createStandingsBubble("🏆 PL STANDINGS (1 - 10)", top10);
+      const card2 = createStandingsBubble("🏆 PL STANDINGS (11 - 20)", bottom10);
+
+      flexPayload = {
+        type: "carousel",
+        contents: [card1, card2]
+      };
+    }
+
+    function createStandingsBubble(headerTitle, teamList) {
+      const rows = teamList.map(t => {
+        const rankNum = parseInt(t.rank, 10);
+        let rankColor = "#555555";
+        if (rankNum <= 4) rankColor = "#2980b9";
+        if (rankNum >= 18) rankColor = "#c0392b";
+
+        const diffVal = parseInt(t.diff, 10);
+        const diffStr = diffVal > 0 ? `+${diffVal}` : t.diff.toString();
+
+        return {
+          "type": "box",
+          "layout": "horizontal",
+          "alignItems": "center",
+          "margin": "sm",
+          "contents": [
+            { "type": "text", "text": t.rank, "size": "xxs", "weight": "bold", "color": rankColor, "flex": 1, "align": "center" },
+            { "type": "image", "url": t.logo, "size": "14px", "aspectMode": "fit", "flex": 1 },
+            { "type": "text", "text": t.name, "size": "xxs", "weight": "bold", "color": "#2c3e50", "flex": 4, "wrap": false },
+            { "type": "text", "text": t.played.toString(), "size": "xxs", "color": "#7f8c8d", "flex": 1, "align": "center" },
+            { "type": "text", "text": diffStr, "size": "xxs", "color": "#7f8c8d", "flex": 1, "align": "center" },
+            { "type": "text", "text": t.points.toString(), "size": "xxs", "weight": "bold", "color": "#27ae60", "flex": 1, "align": "center" }
+          ]
+        };
+      });
+
+      return {
+        "type": "bubble",
+        "size": "kilo",
+        "header": {
+          "type": "box",
+          "layout": "vertical",
+          "backgroundColor": "#3d195b",
+          "contents": [
+            { "type": "text", "text": headerTitle, "color": "#00ff85", "weight": "bold", "size": "xs", "align": "center" }
+          ]
+        },
+        "body": {
+          "type": "box",
+          "layout": "vertical",
+          "contents": [
+            {
+              "type": "box",
+              "layout": "horizontal",
+              "contents": [
+                { "type": "text", "text": "#", "size": "xxs", "color": "#95a5a6", "weight": "bold", "flex": 1, "align": "center" },
+                { "type": "text", "text": " ", "flex": 1 },
+                { "type": "text", "text": "สโมสร", "size": "xxs", "color": "#95a5a6", "weight": "bold", "flex": 4 },
+                { "type": "text", "text": "แข่ง", "size": "xxs", "color": "#95a5a6", "weight": "bold", "flex": 1, "align": "center" },
+                { "type": "text", "text": "+/-", "size": "xxs", "color": "#95a5a6", "weight": "bold", "flex": 1, "align": "center" },
+                { "type": "text", "text": "แต้ม", "size": "xxs", "color": "#95a5a6", "weight": "bold", "flex": 1, "align": "center" }
+              ]
+            },
+            { "type": "separator", "margin": "xs" },
+            ...rows
+          ]
+        }
+      };
+    }
+
     async function triggerShare() {
       const msg = document.getElementById("status-msg");
       if (!flexPayload) {
-        alert("ข้อมูลการ์ดยังไม่พร้อม");
+        alert("กำลังจัดเตรียมข้อมูล กรุณารอสักครู่");
         return;
       }
 
@@ -175,7 +280,7 @@
           const res = await liff.shareTargetPicker([
             {
               type: "flex",
-              altText: `แชร์ผลบอล: ${homeName} vs ${awayName}`,
+              altText: shareAltText,
               contents: flexPayload
             }
           ]);
