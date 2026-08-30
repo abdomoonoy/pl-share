@@ -2,63 +2,122 @@
 <html lang="th">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>แชร์ผลบอล & ตารางคะแนน พรีเมียร์ลีก</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>PL Match Center 2D</title>
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
-    * { box-sizing: border-box; }
-    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; background: #0b0e14; color: #fff; padding: 16px; }
-    .card { width: 100%; max-width: 360px; background: #1a1f2c; border-radius: 16px; padding: 24px; text-align: center; box-shadow: 0 8px 24px rgba(0,0,0,0.4); }
-    .match-title { font-size: 16px; font-weight: bold; color: #00ff85; margin-bottom: 16px; }
-    .teams { display: flex; align-items: center; justify-content: space-around; margin-bottom: 20px; }
-    .team { flex: 1; text-align: center; }
-    .team img { width: 44px; height: 44px; object-fit: contain; }
-    .team span { display: block; font-size: 12px; margin-top: 6px; font-weight: bold; }
-    .score { font-size: 20px; font-weight: 800; color: #fff; flex: 0.8; }
-    .btn-share { width: 100%; background: #06c755; color: #fff; border: none; padding: 14px; border-radius: 12px; font-size: 16px; font-weight: bold; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; box-shadow: 0 4px 12px rgba(6,199,85,0.3); }
-    .btn-share:active { transform: scale(0.98); }
-    #status-msg { margin-top: 14px; font-size: 12px; color: #a0aec0; word-break: break-word; }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0b0e14; color: #fff; min-height: 100vh; padding: 12px; }
+    
+    /* Header Scoreboard */
+    .match-header { background: #161b26; border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.08); }
+    .status-badge { text-align: center; font-size: 11px; font-weight: bold; color: #00ff85; text-transform: uppercase; margin-bottom: 8px; }
+    .score-row { display: flex; align-items: center; justify-content: space-between; }
+    .team-col { flex: 1; text-align: center; }
+    .team-col img { width: 42px; height: 42px; object-fit: contain; }
+    .team-col .name { font-size: 12px; font-weight: bold; margin-top: 4px; }
+    .score-box { font-size: 24px; font-weight: 900; color: #fff; flex: 0.8; text-align: center; letter-spacing: 2px; }
+
+    /* Navigation Tabs */
+    .nav-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
+    .tab-btn { flex: 1; padding: 10px; background: #161b26; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #a0aec0; font-size: 13px; font-weight: bold; cursor: pointer; text-align: center; }
+    .tab-btn.active { background: #38003c; color: #00ff85; border-color: #00ff85; }
+
+    /* 2D Football Pitch */
+    .pitch-container { position: relative; width: 100%; aspect-ratio: 2 / 3; max-width: 400px; margin: 0 auto; background: repeating-linear-gradient(0deg, #1b5e20, #1b5e20 10%, #1e6b24 10%, #1e6b24 20%); border: 2px solid rgba(255,255,255,0.7); border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.6); display: flex; flex-direction: column; justify-content: space-between; padding: 16px 8px; }
+    
+    /* Pitch Markings */
+    .pitch-center-line { position: absolute; top: 50%; left: 0; right: 0; height: 2px; background: rgba(255,255,255,0.5); }
+    .pitch-center-circle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70px; height: 70px; border: 2px solid rgba(255,255,255,0.5); border-radius: 50%; }
+    .pitch-box-top { position: absolute; top: 0; left: 20%; right: 20%; height: 16%; border: 2px solid rgba(255,255,255,0.5); border-top: none; }
+    .pitch-box-bottom { position: absolute; bottom: 0; left: 20%; right: 20%; height: 16%; border: 2px solid rgba(255,255,255,0.5); border-bottom: none; }
+
+    /* Formation Rows */
+    .formation-row { position: relative; z-index: 2; display: flex; justify-content: space-around; align-items: center; width: 100%; }
+    
+    /* Player Node */
+    .player-node { display: flex; flex-direction: column; align-items: center; width: 68px; }
+    .player-shirt { width: 28px; height: 28px; background: #e74c3c; border: 2px solid #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; color: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.5); }
+    .player-shirt.away { background: #3498db; }
+    .player-shirt.gk { background: #f1c40f; color: #000; }
+    .player-name { font-size: 10px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.75); padding: 2px 5px; border-radius: 4px; margin-top: 3px; max-width: 65px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
+
+    /* Team Switcher */
+    .team-switch-bar { display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; }
+    .team-chip { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; background: #161b26; border: 1px solid rgba(255,255,255,0.1); color: #fff; cursor: pointer; }
+    .team-chip.active { background: #00ff85; color: #000; border-color: #00ff85; }
+
+    /* Stats Box */
+    .stats-card { background: #161b26; border-radius: 14px; padding: 16px; margin-top: 12px; }
+    .stat-row { margin-bottom: 12px; }
+    .stat-labels { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; margin-bottom: 4px; }
+    .stat-bar-wrap { display: flex; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
+    .stat-bar-h { background: #00ff85; height: 100%; }
+    .stat-bar-a { background: #3498db; height: 100%; }
+
+    /* Loading Spinner */
+    .center-spinner { text-align: center; padding: 40px 0; }
+    .spin { border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid #00ff85; border-radius: 50%; width: 36px; height: 36px; animation: sp 0.8s linear infinite; margin: 0 auto 12px; }
+    @keyframes sp { 100% { transform: rotate(360deg); } }
   </style>
 </head>
 <body>
-  <div class="card">
-    <div id="preview-box">
-      <div class="match-title" id="m-title">MATCH UPDATE</div>
-      <div class="teams" id="teams-box">
-        <div class="team">
-          <img id="m-hl" src="https://a.espncdn.com/i/leaguelogos/soccer/500/23.png">
-          <span id="m-hn">Home</span>
+
+  <!-- Loading State -->
+  <div id="loader" class="center-spinner">
+    <div class="spin"></div>
+    <p style="font-size: 13px; color: #a0aec0;">กำลังโหลดข้อมูล Match Center...</p>
+  </div>
+
+  <!-- Main View -->
+  <div id="main-content" style="display: none;">
+    <!-- Match Scoreboard -->
+    <div class="match-header">
+      <div class="status-badge" id="m-status">PREMIER LEAGUE</div>
+      <div class="score-row">
+        <div class="team-col">
+          <img id="m-home-logo" src="">
+          <div class="name" id="m-home-name">Home</div>
         </div>
-        <div class="score" id="m-score">- : -</div>
-        <div class="team">
-          <img id="m-al" src="https://a.espncdn.com/i/leaguelogos/soccer/500/23.png">
-          <span id="m-an">Away</span>
+        <div class="score-box" id="m-score-val">VS</div>
+        <div class="team-col">
+          <img id="m-away-logo" src="">
+          <div class="name" id="m-away-name">Away</div>
         </div>
       </div>
-      <button class="btn-share" id="btnShare" onclick="triggerShare()">
-        <span id="btn-text">📤 กดเพื่อส่งต่อการ์ด Flex</span>
-      </button>
     </div>
-    <div id="status-msg">กำลังโหลดข้อมูล...</div>
+
+    <!-- Team Switcher for 2D Pitch -->
+    <div class="team-switch-bar">
+      <div class="team-chip active" id="btn-team-h" onclick="renderTeamPitch('home')">🏠 ทีมเหย้า</div>
+      <div class="team-chip" id="btn-team-a" onclick="renderTeamPitch('away')">✈️ ทีมเยือน</div>
+    </div>
+
+    <!-- 2D Football Pitch -->
+    <div class="pitch-container" id="pitch-board">
+      <div class="pitch-box-top"></div>
+      <div class="pitch-center-circle"></div>
+      <div class="pitch-center-line"></div>
+      <div class="pitch-box-bottom"></div>
+      <!-- Formation lines will be inserted here dynamically -->
+    </div>
+
+    <!-- Live Match Stats -->
+    <div class="stats-card" id="stats-section">
+      <h3 style="font-size: 13px; color: #00ff85; margin-bottom: 14px; text-align: center;">📊 สถิติเกมสด (Match Stats)</h3>
+      <div id="stats-list"></div>
+    </div>
   </div>
 
   <script>
     const LIFF_ID = "2011335665-i2smhkIR";
-    const DEFAULT_LOGO = "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png";
-    let flexPayload = null;
-    let shareAltText = "แชร์ข้อมูลพรีเมียร์ลีก";
+    let matchData = null;
+    let currentTeamTab = "home";
 
-    async function initPage() {
-      const msg = document.getElementById("status-msg");
+    async function initApp() {
       try {
         await liff.init({ liffId: LIFF_ID });
-        
-        if (!liff.isLoggedIn()) {
-          liff.login();
-          return;
-        }
 
-        // ดึงพารามิเตอร์
         let searchStr = window.location.search;
         if (!searchStr && window.location.hash.includes('?')) {
           searchStr = '?' + window.location.hash.split('?')[1];
@@ -71,231 +130,152 @@
           params = new URLSearchParams(stateQuery);
         }
 
-        // กรณีแชร์ตารางคะแนน (Standings)
-        if (params.get('type') === 'standings') {
-          document.getElementById("m-title").innerText = "🏆 ตารางคะแนนพรีเมียร์ลีก";
-          document.getElementById("teams-box").style.display = "none";
-          document.getElementById("btn-text").innerText = "📤 กดเพื่อส่งต่อตารางคะแนน Flex";
-          shareAltText = "อัปเดตตารางคะแนนพรีเมียร์ลีกครบ 20 อันดับ";
-          
-          msg.innerText = "กำลังดึงข้อมูลตารางคะแนนล่าสุด...";
-          await buildStandingsFlex();
-          msg.innerText = "แตะที่ปุ่มสีเขียวด้านบนเพื่อเลือกเพื่อนหรือกลุ่มที่ต้องการส่งต่อ";
-          return;
-        }
-
-        // กรณีแชร์ผลบอล / พรีวิวแมตช์
-        const title = params.get('t') || "MATCH UPDATE";
-        const color = params.get('c') ? ('#' + params.get('c').replace('#', '')) : "#2c3e50";
-        const homeName = params.get('hn') || "Home Team";
-        const homeLogo = params.get('hl') || DEFAULT_LOGO;
-        const awayName = params.get('an') || "Away Team";
-        const awayLogo = params.get('al') || DEFAULT_LOGO;
-        const scoreH = params.get('sh') || "0";
-        const scoreA = params.get('sa') || "0";
-        const detail = params.get('dt') || "สรุปผลการแข่งขัน";
-
-        const centerText = scoreA !== "" ? `${scoreH} - ${scoreA}` : scoreH;
-        shareAltText = `แชร์ผลบอล: ${homeName} vs ${awayName}`;
-
-        document.getElementById("m-title").innerText = title;
-        document.getElementById("m-hn").innerText = homeName;
-        document.getElementById("m-hl").src = homeLogo;
-        document.getElementById("m-an").innerText = awayName;
-        document.getElementById("m-al").src = awayLogo;
-        document.getElementById("m-score").innerText = centerText;
-
-        flexPayload = {
-          "type": "bubble",
-          "size": "kilo",
-          "header": {
-            "type": "box",
-            "layout": "vertical",
-            "backgroundColor": color,
-            "contents": [
-              { "type": "text", "text": title, "color": "#ffffff", "weight": "bold", "size": "md", "align": "center" }
-            ]
-          },
-          "body": {
-            "type": "box",
-            "layout": "vertical",
-            "contents": [
-              {
-                "type": "box",
-                "layout": "horizontal",
-                "alignItems": "center",
-                "contents": [
-                  {
-                    "type": "box",
-                    "layout": "vertical",
-                    "alignItems": "center",
-                    "flex": 4,
-                    "contents": [
-                      { "type": "image", "url": homeLogo, "size": "40px", "aspectMode": "fit" },
-                      { "type": "text", "text": homeName, "size": "xs", "weight": "bold", "wrap": true, "align": "center", "margin": "sm" }
-                    ]
-                  },
-                  {
-                    "type": "box",
-                    "layout": "vertical",
-                    "alignItems": "center",
-                    "flex": 3,
-                    "contents": [
-                      { "type": "text", "text": centerText, "size": "lg", "weight": "bold", "align": "center" },
-                      { "type": "text", "text": "PL", "size": "xxs", "color": "#aaaaaa" }
-                    ]
-                  },
-                  {
-                    "type": "box",
-                    "layout": "vertical",
-                    "alignItems": "center",
-                    "flex": 4,
-                    "contents": [
-                      { "type": "image", "url": awayLogo, "size": "40px", "aspectMode": "fit" },
-                      { "type": "text", "text": awayName, "size": "xs", "weight": "bold", "wrap": true, "align": "center", "margin": "sm" }
-                    ]
-                  }
-                ]
-              },
-              { "type": "separator", "margin": "md" },
-              {
-                "type": "box",
-                "layout": "vertical",
-                "margin": "md",
-                "contents": [
-                  { "type": "text", "text": detail, "size": "xs", "color": "#2c3e50", "weight": "bold", "wrap": true, "align": "center" }
-                ]
-              }
-            ]
-          }
-        };
-
-        msg.innerText = "แตะที่ปุ่มสีเขียวด้านบนเพื่อเลือกเพื่อนหรือกลุ่มที่ต้องการส่งต่อ";
+        const matchId = params.get('id') || "700500";
+        await loadMatchDetails(matchId);
       } catch (err) {
-        msg.innerHTML = `<span style="color:#e74c3c;">เกิดข้อผิดพลาด: ${err.message}</span>`;
+        document.getElementById("loader").innerHTML = `<p style="color:#e74c3c;">เกิดข้อผิดพลาด: ${err.message}</p>`;
       }
     }
 
-    async function buildStandingsFlex() {
-      const res = await fetch("https://site.web.api.espn.com/apis/v2/sports/soccer/eng.1/standings");
-      const data = await res.json();
-      const entries = data.children[0].standings.entries;
+    async function loadMatchDetails(matchId) {
+      try {
+        const res = await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/eng.1/summary?event=${matchId}`);
+        matchData = await res.json();
 
-      const teams = entries.map((e, index) => {
-        const getStat = (name) => {
-          const s = (e.stats || []).find(st => st.name === name || st.type === name);
-          return s ? (s.displayValue || s.value) : "0";
-        };
-        return {
-          rank: (index + 1).toString(),
-          name: e.team.shortDisplayName || e.team.displayName || e.team.name,
-          logo: (e.team.logos && e.team.logos[0]) ? e.team.logos[0].href : DEFAULT_LOGO,
-          played: getStat("gamesPlayed"),
-          diff: getStat("pointDifferential") || getStat("goalDifference"),
-          points: getStat("points")
-        };
-      });
+        // 1. Render Scoreboard
+        const comp = matchData.header.competitions[0];
+        const home = comp.competitors.find(c => c.homeAway === "home");
+        const away = comp.competitors.find(c => c.homeAway === "away");
 
-      const top10 = teams.slice(0, 10);
-      const bottom10 = teams.slice(10, 20);
+        document.getElementById("m-status").innerText = matchData.header.league.name + " • " + (matchData.header.status ? matchData.header.status.type.detail : "");
+        document.getElementById("m-home-name").innerText = home.team.shortDisplayName || home.team.name;
+        document.getElementById("m-home-logo").src = home.team.logos ? home.team.logos[0].href : "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png";
+        document.getElementById("m-away-name").innerText = away.team.shortDisplayName || away.team.name;
+        document.getElementById("m-away-logo").src = away.team.logos ? away.team.logos[0].href : "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png";
 
-      const card1 = createStandingsBubble("🏆 PL STANDINGS (1 - 10)", top10);
-      const card2 = createStandingsBubble("🏆 PL STANDINGS (11 - 20)", bottom10);
+        document.getElementById("btn-team-h").innerText = `🏠 ${home.team.shortDisplayName || home.team.name}`;
+        document.getElementById("btn-team-a").innerText = `✈️ ${away.team.shortDisplayName || away.team.name}`;
 
-      flexPayload = {
-        type: "carousel",
-        contents: [card1, card2]
-      };
+        const scoreH = home.score !== undefined ? home.score : "";
+        const scoreA = away.score !== undefined ? away.score : "";
+        document.getElementById("m-score-val").innerText = scoreA !== "" ? `${scoreH} - ${scoreA}` : "VS";
+
+        // 2. Render 2D Pitch
+        renderTeamPitch("home");
+
+        // 3. Render Match Stats
+        renderStats();
+
+        document.getElementById("loader").style.display = "none";
+        document.getElementById("main-content").style.display = "block";
+      } catch (e) {
+        document.getElementById("loader").innerHTML = `<p style="color:#e74c3c;">ไม่พบข้อมูลผังผู้เล่นสำหรับคู่นี้</p>`;
+      }
     }
 
-    function createStandingsBubble(headerTitle, teamList) {
-      const rows = teamList.map(t => {
-        const rankNum = parseInt(t.rank, 10);
-        let rankColor = "#555555";
-        if (rankNum <= 4) rankColor = "#2980b9";
-        if (rankNum >= 18) rankColor = "#c0392b";
+    function renderTeamPitch(side) {
+      currentTeamTab = side;
+      document.getElementById("btn-team-h").className = side === "home" ? "team-chip active" : "team-chip";
+      document.getElementById("btn-team-a").className = side === "away" ? "team-chip active" : "team-chip";
 
-        const diffVal = parseInt(t.diff, 10);
-        const diffStr = diffVal > 0 ? `+${diffVal}` : t.diff.toString();
+      const pitch = document.getElementById("pitch-board");
+      // ล้างแถวผู้เล่นเดิมออก
+      const oldRows = pitch.querySelectorAll(".formation-row");
+      oldRows.forEach(r => r.remove());
 
-        return {
-          "type": "box",
-          "layout": "horizontal",
-          "alignItems": "center",
-          "margin": "sm",
-          "contents": [
-            { "type": "text", "text": t.rank, "size": "xxs", "weight": "bold", "color": rankColor, "flex": 1, "align": "center" },
-            { "type": "image", "url": t.logo, "size": "14px", "aspectMode": "fit", "flex": 1 },
-            { "type": "text", "text": t.name, "size": "xxs", "weight": "bold", "color": "#2c3e50", "flex": 4, "wrap": false },
-            { "type": "text", "text": t.played.toString(), "size": "xxs", "color": "#7f8c8d", "flex": 1, "align": "center" },
-            { "type": "text", "text": diffStr, "size": "xxs", "color": "#7f8c8d", "flex": 1, "align": "center" },
-            { "type": "text", "text": t.points.toString(), "size": "xxs", "weight": "bold", "color": "#27ae60", "flex": 1, "align": "center" }
-          ]
-        };
+      if (!matchData || !matchData.rosters || matchData.rosters.length === 0) return;
+
+      const rosterObj = matchData.rosters.find(r => r.homeAway === side) || matchData.rosters[0];
+      const formationStr = rosterObj.formation || "4-3-3";
+      
+      // ดึง 11 ตัวจริง
+      const starters = (rosterObj.roster || []).filter(p => p.starter === true);
+      if (starters.length === 0) return;
+
+      // จัดผังตาม Formation เช่น "4-2-3-1" -> [1, 4, 2, 3, 1]
+      const formCounts = [1, ...formationStr.split('-').map(n => parseInt(n, 10))];
+      
+      let playerIndex = 0;
+      // ลูปเรียงจากหน้า (กองหน้า) ลงไปหลัง (ผู้รักษาประตู) เพื่อความสมดุลบนสนาม
+      const reversedCounts = [...formCounts].reverse();
+
+      reversedCounts.forEach((count, rowIndex) => {
+        const rowDiv = document.createElement("div");
+        rowDiv.className = "formation-row";
+
+        const rowPlayers = starters.slice(playerIndex, playerIndex + count);
+        playerIndex += count;
+
+        rowPlayers.forEach(p => {
+          const isGK = rowIndex === (reversedCounts.length - 1);
+          const pDiv = document.createElement("div");
+          pDiv.className = "player-node";
+
+          const shirtClass = isGK ? "player-shirt gk" : (side === "away" ? "player-shirt away" : "player-shirt");
+          const pName = p.athlete ? (p.athlete.shortName || p.athlete.displayName) : (p.jersey || "P");
+          const pNum = p.jersey || "";
+
+          pDiv.innerHTML = `
+            <div class="${shirtClass}">${pNum}</div>
+            <div class="player-name">${pName}</div>
+          `;
+          rowDiv.appendChild(pDiv);
+        });
+
+        pitch.appendChild(rowDiv);
       });
-
-      return {
-        "type": "bubble",
-        "size": "kilo",
-        "header": {
-          "type": "box",
-          "layout": "vertical",
-          "backgroundColor": "#3d195b",
-          "contents": [
-            { "type": "text", "text": headerTitle, "color": "#00ff85", "weight": "bold", "size": "xs", "align": "center" }
-          ]
-        },
-        "body": {
-          "type": "box",
-          "layout": "vertical",
-          "contents": [
-            {
-              "type": "box",
-              "layout": "horizontal",
-              "contents": [
-                { "type": "text", "text": "#", "size": "xxs", "color": "#95a5a6", "weight": "bold", "flex": 1, "align": "center" },
-                { "type": "text", "text": " ", "flex": 1 },
-                { "type": "text", "text": "สโมสร", "size": "xxs", "color": "#95a5a6", "weight": "bold", "flex": 4 },
-                { "type": "text", "text": "แข่ง", "size": "xxs", "color": "#95a5a6", "weight": "bold", "flex": 1, "align": "center" },
-                { "type": "text", "text": "+/-", "size": "xxs", "color": "#95a5a6", "weight": "bold", "flex": 1, "align": "center" },
-                { "type": "text", "text": "แต้ม", "size": "xxs", "color": "#95a5a6", "weight": "bold", "flex": 1, "align": "center" }
-              ]
-            },
-            { "type": "separator", "margin": "xs" },
-            ...rows
-          ]
-        }
-      };
     }
 
-    async function triggerShare() {
-      const msg = document.getElementById("status-msg");
-      if (!flexPayload) {
-        alert("กำลังจัดเตรียมข้อมูล กรุณารอสักครู่");
+    function renderStats() {
+      const statsList = document.getElementById("stats-list");
+      statsList.innerHTML = "";
+
+      if (!matchData.boxscore || !matchData.boxscore.teams || matchData.boxscore.teams.length < 2) {
+        document.getElementById("stats-section").style.display = "none";
         return;
       }
 
-      try {
-        if (liff.isApiAvailable('shareTargetPicker')) {
-          const res = await liff.shareTargetPicker([
-            {
-              type: "flex",
-              altText: shareAltText,
-              contents: flexPayload
-            }
-          ]);
-          if (res) {
-            liff.closeWindow();
-          }
-        } else {
-          alert("อุปกรณ์นี้ไม่รองรับการแชร์ข้อความ");
-        }
-      } catch (err) {
-        msg.innerHTML = `<span style="color:#e74c3c;">แชร์ไม่สำเร็จ: ${err.message || JSON.stringify(err)}</span>`;
-      }
+      const tHome = matchData.boxscore.teams.find(t => t.homeAway === "home") || matchData.boxscore.teams[0];
+      const tAway = matchData.boxscore.teams.find(t => t.homeAway === "away") || matchData.boxscore.teams[1];
+
+      const getVal = (teamObj, statName) => {
+        const st = (teamObj.statistics || []).find(s => s.name === statName || s.label.toLowerCase().includes(statName.toLowerCase()));
+        return st ? parseFloat(st.displayValue) : 0;
+      };
+
+      const statItems = [
+        { label: "เปอร์เซ็นต์ครองบอล (Possession)", key: "possessionPct", unit: "%" },
+        { label: "โอกาสยิงทั้งหมด (Total Shots)", key: "shots", unit: "" },
+        { label: "ยิงตรงกรอบ (Shots on Target)", key: "shotsOnTarget", unit: "" },
+        { label: "เตะมุม (Corner Kicks)", key: "wonCorners", unit: "" },
+        { label: "ฟาวล์ (Fouls)", key: "foulsCommited", unit: "" }
+      ];
+
+      statItems.forEach(item => {
+        const vH = getVal(tHome, item.key);
+        const vA = getVal(tAway, item.key);
+        const total = (vH + vA) > 0 ? (vH + vA) : 1;
+        const pctH = (vH / total) * 100;
+        const pctA = (vA / total) * 100;
+
+        const row = document.createElement("div");
+        row.className = "stat-row";
+        row.innerHTML = `
+          <div class="stat-labels">
+            <span style="color:#00ff85;">${vH}${item.unit}</span>
+            <span style="color:#a0aec0; font-size:11px;">${item.label}</span>
+            <span style="color:#3498db;">${vA}${item.unit}</span>
+          </div>
+          <div class="stat-bar-wrap">
+            <div class="stat-bar-h" style="width: ${pctH}%;"></div>
+            <div class="stat-bar-a" style="width: ${pctA}%;"></div>
+          </div>
+        `;
+        statsList.appendChild(row);
+      });
     }
 
-    initPage();
+    initApp();
   </script>
 </body>
 </html>
