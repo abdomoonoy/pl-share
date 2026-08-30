@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>PL Match Center 2D</title>
+  <title>PL Match Center</title>
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -18,37 +18,38 @@
     .team-col .name { font-size: 12px; font-weight: bold; margin-top: 4px; }
     .score-box { font-size: 24px; font-weight: 900; color: #fff; flex: 0.8; text-align: center; letter-spacing: 2px; }
 
-    /* Navigation Tabs */
-    .nav-tabs { display: flex; gap: 8px; margin-bottom: 12px; }
-    .tab-btn { flex: 1; padding: 10px; background: #161b26; border: 1px solid rgba(255,255,255,0.1); border-radius: 10px; color: #a0aec0; font-size: 13px; font-weight: bold; cursor: pointer; text-align: center; }
-    .tab-btn.active { background: #38003c; color: #00ff85; border-color: #00ff85; }
+    /* Timeline Split Section (ซ้าย-ขวา) */
+    .section-card { background: #161b26; border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.05); }
+    .section-title { font-size: 13px; color: #00ff85; margin-bottom: 14px; text-align: center; font-weight: bold; }
+    
+    .timeline-container { position: relative; width: 100%; display: flex; flex-direction: column; gap: 10px; }
+    .timeline-line { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; background: rgba(255,255,255,0.1); transform: translateX(-50%); z-index: 1; }
+    
+    .timeline-item { position: relative; z-index: 2; display: flex; align-items: center; width: 100%; }
+    .t-left { flex: 1; display: flex; justify-content: flex-end; align-items: center; gap: 6px; padding-right: 12px; font-size: 12px; font-weight: bold; text-align: right; }
+    .t-center { min-width: 32px; height: 22px; background: #232a3b; border: 1px solid rgba(255,255,255,0.2); border-radius: 11px; font-size: 10px; font-weight: bold; color: #00ff85; display: flex; align-items: center; justify-content: center; z-index: 3; }
+    .t-right { flex: 1; display: flex; justify-content: flex-start; align-items: center; gap: 6px; padding-left: 12px; font-size: 12px; font-weight: bold; text-align: left; }
+    .t-icon { font-size: 14px; }
 
     /* 2D Football Pitch */
     .pitch-container { position: relative; width: 100%; aspect-ratio: 2 / 3; max-width: 400px; margin: 0 auto; background: repeating-linear-gradient(0deg, #1b5e20, #1b5e20 10%, #1e6b24 10%, #1e6b24 20%); border: 2px solid rgba(255,255,255,0.7); border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.6); display: flex; flex-direction: column; justify-content: space-between; padding: 16px 8px; }
-    
-    /* Pitch Markings */
     .pitch-center-line { position: absolute; top: 50%; left: 0; right: 0; height: 2px; background: rgba(255,255,255,0.5); }
     .pitch-center-circle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70px; height: 70px; border: 2px solid rgba(255,255,255,0.5); border-radius: 50%; }
     .pitch-box-top { position: absolute; top: 0; left: 20%; right: 20%; height: 16%; border: 2px solid rgba(255,255,255,0.5); border-top: none; }
     .pitch-box-bottom { position: absolute; bottom: 0; left: 20%; right: 20%; height: 16%; border: 2px solid rgba(255,255,255,0.5); border-bottom: none; }
 
-    /* Formation Rows */
     .formation-row { position: relative; z-index: 2; display: flex; justify-content: space-around; align-items: center; width: 100%; }
-    
-    /* Player Node */
     .player-node { display: flex; flex-direction: column; align-items: center; width: 68px; }
     .player-shirt { width: 28px; height: 28px; background: #e74c3c; border: 2px solid #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; color: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.5); }
     .player-shirt.away { background: #3498db; }
     .player-shirt.gk { background: #f1c40f; color: #000; }
     .player-name { font-size: 10px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.75); padding: 2px 5px; border-radius: 4px; margin-top: 3px; max-width: 65px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
 
-    /* Team Switcher */
     .team-switch-bar { display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; }
     .team-chip { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; background: #161b26; border: 1px solid rgba(255,255,255,0.1); color: #fff; cursor: pointer; }
     .team-chip.active { background: #00ff85; color: #000; border-color: #00ff85; }
 
     /* Stats Box */
-    .stats-card { background: #161b26; border-radius: 14px; padding: 16px; margin-top: 12px; }
     .stat-row { margin-bottom: 12px; }
     .stat-labels { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; margin-bottom: 4px; }
     .stat-bar-wrap { display: flex; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
@@ -87,24 +88,33 @@
       </div>
     </div>
 
-    <!-- Team Switcher for 2D Pitch -->
-    <div class="team-switch-bar">
-      <div class="team-chip active" id="btn-team-h" onclick="renderTeamPitch('home')">🏠 ทีมเหย้า</div>
-      <div class="team-chip" id="btn-team-a" onclick="renderTeamPitch('away')">✈️ ทีมเยือน</div>
+    <!-- Timeline (เหตุการณ์สำคัญ ซ้าย-ขวา) -->
+    <div class="section-card" id="timeline-section">
+      <div class="section-title">⏱️ เหตุการณ์สำคัญในเกม (Timeline)</div>
+      <div class="timeline-container" id="timeline-list">
+        <div class="timeline-line"></div>
+        <!-- รายการประตู/ใบเหลือง/ใบแดง จะถูกเพิ่มที่นี่ -->
+      </div>
     </div>
 
-    <!-- 2D Football Pitch -->
-    <div class="pitch-container" id="pitch-board">
-      <div class="pitch-box-top"></div>
-      <div class="pitch-center-circle"></div>
-      <div class="pitch-center-line"></div>
-      <div class="pitch-box-bottom"></div>
-      <!-- Formation lines will be inserted here dynamically -->
+    <!-- 2D Pitch Section -->
+    <div class="section-card">
+      <div class="section-title">🏟️ ผัง 11 ตัวจริงบนสนาม 2D</div>
+      <div class="team-switch-bar">
+        <div class="team-chip active" id="btn-team-h" onclick="renderTeamPitch('home')">🏠 ทีมเหย้า</div>
+        <div class="team-chip" id="btn-team-a" onclick="renderTeamPitch('away')">✈️ ทีมเยือน</div>
+      </div>
+      <div class="pitch-container" id="pitch-board">
+        <div class="pitch-box-top"></div>
+        <div class="pitch-center-circle"></div>
+        <div class="pitch-center-line"></div>
+        <div class="pitch-box-bottom"></div>
+      </div>
     </div>
 
     <!-- Live Match Stats -->
-    <div class="stats-card" id="stats-section">
-      <h3 style="font-size: 13px; color: #00ff85; margin-bottom: 14px; text-align: center;">📊 สถิติเกมสด (Match Stats)</h3>
+    <div class="section-card" id="stats-section">
+      <div class="section-title">📊 สถิติเกมสด (Match Stats)</div>
       <div id="stats-list"></div>
     </div>
   </div>
@@ -112,7 +122,7 @@
   <script>
     const LIFF_ID = "2011335665-i2smhkIR";
     let matchData = null;
-    let currentTeamTab = "home";
+    let homeTeamId = null, awayTeamId = null;
 
     async function initApp() {
       try {
@@ -147,6 +157,9 @@
         const home = comp.competitors.find(c => c.homeAway === "home");
         const away = comp.competitors.find(c => c.homeAway === "away");
 
+        homeTeamId = home.id;
+        awayTeamId = away.id;
+
         document.getElementById("m-status").innerText = matchData.header.league.name + " • " + (matchData.header.status ? matchData.header.status.type.detail : "");
         document.getElementById("m-home-name").innerText = home.team.shortDisplayName || home.team.name;
         document.getElementById("m-home-logo").src = home.team.logos ? home.team.logos[0].href : "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png";
@@ -160,10 +173,13 @@
         const scoreA = away.score !== undefined ? away.score : "";
         document.getElementById("m-score-val").innerText = scoreA !== "" ? `${scoreH} - ${scoreA}` : "VS";
 
-        // 2. Render 2D Pitch
+        // 2. Render Timeline (แบ่งซ้าย-ขวา)
+        renderTimeline();
+
+        // 3. Render 2D Pitch
         renderTeamPitch("home");
 
-        // 3. Render Match Stats
+        // 4. Render Match Stats
         renderStats();
 
         document.getElementById("loader").style.display = "none";
@@ -173,13 +189,63 @@
       }
     }
 
+    function renderTimeline() {
+      const container = document.getElementById("timeline-list");
+      const keyEvents = matchData.keyEvents || [];
+
+      if (keyEvents.length === 0) {
+        document.getElementById("timeline-section").style.display = "none";
+        return;
+      }
+
+      keyEvents.forEach(k => {
+        const clock = k.clock ? k.clock.displayValue : "";
+        const typeText = (k.type && k.type.text) ? k.type.text.toLowerCase() : "";
+        const eventTeamId = k.team ? k.team.id : null;
+        const isHome = eventTeamId === homeTeamId;
+
+        const playerName = (k.participants && k.participants[0] && k.participants[0].athlete)
+                           ? (k.participants[0].athlete.shortName || k.participants[0].athlete.displayName)
+                           : (k.text || "ผู้เล่น");
+
+        let icon = "⚡";
+        let extra = "";
+        if (typeText.includes("goal") || typeText.includes("penalty")) {
+          icon = "⚽";
+          if (typeText.includes("penalty")) extra = " (P)";
+          if (typeText.includes("own")) extra = " (OG)";
+        } else if (typeText.includes("red card")) {
+          icon = "🟥";
+        } else if (typeText.includes("yellow card")) {
+          icon = typeText.includes("second") ? "🟨🟥" : "🟨";
+        }
+
+        const row = document.createElement("div");
+        row.className = "timeline-item";
+
+        if (isHome) {
+          row.innerHTML = `
+            <div class="t-left"><span>${playerName}${extra}</span><span class="t-icon">${icon}</span></div>
+            <div class="t-center">${clock}</div>
+            <div class="t-right"></div>
+          `;
+        } else {
+          row.innerHTML = `
+            <div class="t-left"></div>
+            <div class="t-center">${clock}</div>
+            <div class="t-right"><span class="t-icon">${icon}</span><span>${playerName}${extra}</span></div>
+          `;
+        }
+
+        container.appendChild(row);
+      });
+    }
+
     function renderTeamPitch(side) {
-      currentTeamTab = side;
       document.getElementById("btn-team-h").className = side === "home" ? "team-chip active" : "team-chip";
       document.getElementById("btn-team-a").className = side === "away" ? "team-chip active" : "team-chip";
 
       const pitch = document.getElementById("pitch-board");
-      // ล้างแถวผู้เล่นเดิมออก
       const oldRows = pitch.querySelectorAll(".formation-row");
       oldRows.forEach(r => r.remove());
 
@@ -188,15 +254,11 @@
       const rosterObj = matchData.rosters.find(r => r.homeAway === side) || matchData.rosters[0];
       const formationStr = rosterObj.formation || "4-3-3";
       
-      // ดึง 11 ตัวจริง
       const starters = (rosterObj.roster || []).filter(p => p.starter === true);
       if (starters.length === 0) return;
 
-      // จัดผังตาม Formation เช่น "4-2-3-1" -> [1, 4, 2, 3, 1]
       const formCounts = [1, ...formationStr.split('-').map(n => parseInt(n, 10))];
-      
       let playerIndex = 0;
-      // ลูปเรียงจากหน้า (กองหน้า) ลงไปหลัง (ผู้รักษาประตู) เพื่อความสมดุลบนสนาม
       const reversedCounts = [...formCounts].reverse();
 
       reversedCounts.forEach((count, rowIndex) => {
