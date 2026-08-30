@@ -20,7 +20,7 @@
   </div>
 
   <script>
-    // 🟢 ใส่ LIFF ID ของคุณตรงนี้
+    // 🟢 LIFF ID ของคุณ
     const LIFF_ID = "2009210214-G4R7lVn9"; 
 
     async function initShare() {
@@ -31,22 +31,89 @@
           return;
         }
 
-        const urlParams = new URLSearchParams(window.location.search);
-        const flexRaw = urlParams.get('flex');
+        const p = new URLSearchParams(window.location.search);
+        const title = p.get('t') || "MATCH UPDATE";
+        const color = p.get('c') ? ('#' + p.get('c')) : "#2c3e50";
+        const homeName = p.get('hn') || "";
+        const homeLogo = p.get('hl') || "";
+        const awayName = p.get('an') || "";
+        const awayLogo = p.get('al') || "";
+        const scoreH = p.get('sh') || "";
+        const scoreA = p.get('sa') || "";
+        const detail = p.get('dt') || "";
 
-        if (!flexRaw) {
-          document.getElementById("msg").innerText = "ไม่พบข้อมูลการ์ด";
-          setTimeout(() => liff.closeWindow(), 2000);
-          return;
-        }
+        const centerText = scoreA !== "" ? `${scoreH} - ${scoreA}` : scoreH;
 
-        const flexObj = JSON.parse(decodeURIComponent(flexRaw));
+        const flexObj = {
+          "type": "bubble",
+          "size": "kilo",
+          "header": {
+            "type": "box",
+            "layout": "vertical",
+            "backgroundColor": color,
+            "contents": [
+              { "type": "text", "text": title, "color": "#ffffff", "weight": "bold", "size": "md", "align": "center" }
+            ]
+          },
+          "body": {
+            "type": "box",
+            "layout": "vertical",
+            "contents": [
+              {
+                "type": "box",
+                "layout": "horizontal",
+                "alignItems": "center",
+                "contents": [
+                  {
+                    "type": "box",
+                    "layout": "vertical",
+                    "alignItems": "center",
+                    "flex": 4,
+                    "contents": [
+                      { "type": "image", "url": homeLogo, "size": "40px", "aspectMode": "fit" },
+                      { "type": "text", "text": homeName, "size": "xs", "weight": "bold", "wrap": true, "align": "center", "margin": "sm" }
+                    ]
+                  },
+                  {
+                    "type": "box",
+                    "layout": "vertical",
+                    "alignItems": "center",
+                    "flex": 3,
+                    "contents": [
+                      { "type": "text", "text": centerText, "size": "lg", "weight": "bold", "align": "center" },
+                      { "type": "text", "text": "PL", "size": "xxs", "color": "#aaaaaa" }
+                    ]
+                  },
+                  {
+                    "type": "box",
+                    "layout": "vertical",
+                    "alignItems": "center",
+                    "flex": 4,
+                    "contents": [
+                      { "type": "image", "url": awayLogo, "size": "40px", "aspectMode": "fit" },
+                      { "type": "text", "text": awayName, "size": "xs", "weight": "bold", "wrap": true, "align": "center", "margin": "sm" }
+                    ]
+                  }
+                ]
+              },
+              { "type": "separator", "margin": "md" },
+              {
+                "type": "box",
+                "layout": "vertical",
+                "margin": "md",
+                "contents": [
+                  { "type": "text", "text": detail, "size": "xs", "color": "#2c3e50", "weight": "bold", "wrap": true, "align": "center" }
+                ]
+              }
+            ]
+          }
+        };
 
         if (liff.isApiAvailable('shareTargetPicker')) {
           await liff.shareTargetPicker([
             {
               type: "flex",
-              altText: "แชร์ผลบอลสด พรีเมียร์ลีก",
+              altText: `แชร์ผลบอล: ${homeName} vs ${awayName}`,
               contents: flexObj
             }
           ]);
