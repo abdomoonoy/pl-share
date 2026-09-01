@@ -3,6 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <!-- 🟢 ป้องกัน ESPN บล็อกรูปภาพข้ามโดเมน -->
+  <meta name="referrer" content="no-referrer">
   <title>PL Match Center 2D</title>
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
@@ -40,11 +42,11 @@
 
     .formation-row { position: relative; z-index: 2; display: flex; justify-content: space-around; align-items: center; width: 100%; }
     
-    /* Player Node with Real Face */
+    /* Player Node */
     .player-node { display: flex; flex-direction: column; align-items: center; width: 68px; }
-    .player-avatar-wrap { position: relative; width: 38px; height: 38px; display: flex; align-items: center; justify-content: center; }
-    .player-photo { width: 38px; height: 38px; border-radius: 50%; object-fit: cover; background: #ffffff; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.6); }
-    .player-badge { position: absolute; bottom: -2px; right: -2px; width: 16px; height: 16px; border-radius: 50%; background: #00ff85; color: #000; font-size: 9px; font-weight: 900; display: flex; align-items: center; justify-content: center; border: 1px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.5); }
+    .player-avatar-wrap { position: relative; width: 40px; height: 40px; display: flex; align-items: center; justify-content: center; }
+    .player-photo { width: 40px; height: 40px; border-radius: 50%; object-fit: cover; background: #ffffff; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.6); }
+    .player-badge { position: absolute; bottom: -2px; right: -2px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 8px; font-size: 9px; font-weight: 900; display: flex; align-items: center; justify-content: center; border: 1px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.5); }
     .player-name { font-size: 10px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.75); padding: 2px 5px; border-radius: 4px; margin-top: 3px; max-width: 65px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
 
     .team-switch-bar { display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; }
@@ -79,12 +81,12 @@
       <div class="status-badge" id="m-status">PREMIER LEAGUE</div>
       <div class="score-row">
         <div class="team-col">
-          <img id="m-home-logo" src="">
+          <img id="m-home-logo" src="" referrerpolicy="no-referrer">
           <div class="name" id="m-home-name">Home</div>
         </div>
         <div class="score-box" id="m-score-val">VS</div>
         <div class="team-col">
-          <img id="m-away-logo" src="">
+          <img id="m-away-logo" src="" referrerpolicy="no-referrer">
           <div class="name" id="m-away-name">Away</div>
         </div>
       </div>
@@ -122,7 +124,7 @@
 
   <script>
     const LIFF_ID = "2011335665-i2smhkIR";
-    const FALLBACK_AVATAR = "https://a.espncdn.com/i/headshots/nophoto.png";
+    const FALLBACK_AVATAR = "https://a.espncdn.com/combiner/i?img=/i/headshots/nophoto.png&w=96&h=96&scale=crop";
     let matchData = null;
     let homeTeamId = null, awayTeamId = null;
 
@@ -273,17 +275,20 @@
           const pNum = p.jersey || "-";
           const pId = p.athlete ? p.athlete.id : null;
           
-          // ใช้ Direct CDN URL ของ ESPN เพื่อโหลดรูปจริงโดยตรง
-          const photoUrl = pId 
-            ? `https://a.espncdn.com/i/headshots/soccer/players/full/${pId}.png`
-            : FALLBACK_AVATAR;
+          // ดึง URL รูปจริงผ่าน ESPN Combiner พร้อมแนบตัวแปร No-Referrer
+          let photoUrl = FALLBACK_AVATAR;
+          if (p.athlete && p.athlete.headshot && p.athlete.headshot.href) {
+            photoUrl = p.athlete.headshot.href;
+          } else if (pId) {
+            photoUrl = `https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/${pId}.png&w=96&h=96&scale=crop`;
+          }
 
           const badgeBg = isGK ? "#f1c40f" : (side === "away" ? "#3498db" : "#00ff85");
           const badgeColor = isGK ? "#000" : (side === "away" ? "#fff" : "#000");
 
           pDiv.innerHTML = `
             <div class="player-avatar-wrap">
-              <img class="player-photo" src="${photoUrl}" onerror="this.onerror=null; this.src='${FALLBACK_AVATAR}';">
+              <img class="player-photo" src="${photoUrl}" referrerpolicy="no-referrer" onerror="this.onerror=null; this.src='${FALLBACK_AVATAR}';">
               <div class="player-badge" style="background:${badgeBg}; color:${badgeColor};">${pNum}</div>
             </div>
             <div class="player-name">${pName}</div>
