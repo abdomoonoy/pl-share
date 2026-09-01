@@ -4,12 +4,20 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <meta name="referrer" content="no-referrer">
-  <title>PL Match Center 2D</title>
+  <title>Premier League Hub</title>
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0b0e14; color: #fff; min-height: 100vh; padding: 12px; }
     
+    /* Top Main Navigation Tabs */
+    .main-nav { display: flex; gap: 6px; background: #161b26; padding: 6px; border-radius: 12px; margin-bottom: 14px; border: 1px solid rgba(255,255,255,0.08); }
+    .nav-tab-btn { flex: 1; padding: 8px 4px; background: transparent; border: none; border-radius: 8px; color: #a0aec0; font-size: 12px; font-weight: bold; cursor: pointer; text-align: center; transition: all 0.2s ease; }
+    .nav-tab-btn.active { background: #38003c; color: #00ff85; box-shadow: 0 2px 6px rgba(0,0,0,0.4); }
+
+    .tab-view { display: none; }
+    .tab-view.active { display: block; }
+
     /* Header Scoreboard */
     .match-header { background: #161b26; border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.08); }
     .status-badge { text-align: center; font-size: 11px; font-weight: bold; color: #00ff85; text-transform: uppercase; margin-bottom: 8px; }
@@ -45,69 +53,15 @@
     .player-node { display: flex; flex-direction: column; align-items: center; width: 70px; }
     .player-avatar-wrap { position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
     
-    /* Real Player Face */
-    .player-photo { 
-      width: 44px; 
-      height: 44px; 
-      border-radius: 50%; 
-      object-fit: cover; 
-      background: #232a3b; 
-      border: 2px solid #ffffff; 
-      box-shadow: 0 3px 8px rgba(0,0,0,0.6);
-      display: none; 
-    }
-    
-    /* Mini Number Badge */
-    .player-badge { 
-      position: absolute; 
-      bottom: -2px; 
-      right: -2px; 
-      min-width: 16px; 
-      height: 16px; 
-      padding: 0 3px; 
-      border-radius: 8px; 
-      font-size: 9px; 
-      font-weight: 900; 
-      display: none; 
-      align-items: center; 
-      justify-content: center; 
-      border: 1.5px solid #fff; 
-      box-shadow: 0 1px 4px rgba(0,0,0,0.6); 
-      z-index: 4; 
-    }
+    .player-photo { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: #232a3b; border: 2px solid #ffffff; box-shadow: 0 3px 8px rgba(0,0,0,0.6); display: none; }
+    .player-badge { position: absolute; bottom: -2px; right: -2px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 8px; font-size: 9px; font-weight: 900; display: none; align-items: center; justify-content: center; border: 1.5px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.6); z-index: 4; }
 
-    /* Fallback Disc */
-    .player-disc {
-      width: 42px;
-      height: 42px;
-      border-radius: 50%;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-size: 15px;
-      font-weight: 900;
-      color: #fff;
-      border: 2px solid #ffffff;
-      box-shadow: 0 3px 8px rgba(0,0,0,0.6);
-    }
+    .player-disc { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 900; color: #fff; border: 2px solid #ffffff; box-shadow: 0 3px 8px rgba(0,0,0,0.6); }
     .player-disc.home { background: linear-gradient(135deg, #e74c3c, #c0392b); }
     .player-disc.away { background: linear-gradient(135deg, #3498db, #2980b9); }
     .player-disc.gk { background: linear-gradient(135deg, #f1c40f, #d4ac0d); color: #000; }
 
-    .player-name { 
-      font-size: 10px; 
-      font-weight: bold; 
-      color: #fff; 
-      background: rgba(0,0,0,0.85); 
-      padding: 2px 6px; 
-      border-radius: 4px; 
-      margin-top: 3px; 
-      max-width: 68px; 
-      overflow: hidden; 
-      text-overflow: ellipsis; 
-      white-space: nowrap; 
-      text-align: center; 
-    }
+    .player-name { font-size: 10px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.85); padding: 2px 6px; border-radius: 4px; margin-top: 3px; max-width: 68px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
 
     .team-switch-bar { display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; }
     .team-chip { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; background: #161b26; border: 1px solid rgba(255,255,255,0.1); color: #fff; cursor: pointer; }
@@ -120,6 +74,26 @@
     .stat-bar-h { background: #00ff85; height: 100%; }
     .stat-bar-a { background: #3498db; height: 100%; }
 
+    /* Standings Table Styling */
+    .table-responsive { overflow-x: auto; width: 100%; }
+    .standings-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .standings-tbl th { color: #a0aec0; padding: 8px 4px; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.1); }
+    .standings-tbl td { padding: 8px 4px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; }
+    .standings-tbl td.team-name-cell { text-align: left; display: flex; align-items: center; gap: 6px; font-weight: bold; }
+    .standings-tbl img { width: 18px; height: 18px; object-fit: contain; }
+    .rank-top4 { border-left: 3px solid #3498db; }
+    .rank-rel { border-left: 3px solid #e74c3c; }
+
+    /* Fixtures List Styling */
+    .fixture-card { background: #161b26; border-radius: 12px; padding: 12px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(255,255,255,0.06); cursor: pointer; }
+    .fixture-card:hover { border-color: #00ff85; }
+    .f-team { display: flex; align-items: center; gap: 8px; flex: 1; font-size: 12px; font-weight: bold; }
+    .f-team.away { justify-content: flex-end; }
+    .f-team img { width: 24px; height: 24px; object-fit: contain; }
+    .f-center { min-width: 60px; text-align: center; }
+    .f-score { font-size: 14px; font-weight: 900; color: #00ff85; }
+    .f-status { font-size: 10px; color: #a0aec0; margin-top: 2px; }
+
     /* Loading Spinner */
     .center-spinner { text-align: center; padding: 40px 0; }
     .spin { border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid #00ff85; border-radius: 50%; width: 36px; height: 36px; animation: sp 0.8s linear infinite; margin: 0 auto 12px; }
@@ -128,12 +102,22 @@
 </head>
 <body>
 
-  <div id="loader" class="center-spinner">
-    <div class="spin"></div>
-    <p style="font-size: 13px; color: #a0aec0;">กำลังโหลดข้อมูล Match Center...</p>
+  <!-- Top Main Navigation -->
+  <div class="main-nav">
+    <button class="nav-tab-btn active" id="tab-btn-match" onclick="switchTab('match')">🏟️ แมตช์เซ็นเตอร์</button>
+    <button class="nav-tab-btn" id="tab-btn-standings" onclick="switchTab('standings')">🏆 ตารางคะแนน</button>
+    <button class="nav-tab-btn" id="tab-btn-fixtures" onclick="switchTab('fixtures')">📅 ผลสด / โปรแกรม</button>
   </div>
 
-  <div id="main-content" style="display: none;">
+  <!-- Loading State -->
+  <div id="loader" class="center-spinner">
+    <div class="spin"></div>
+    <p style="font-size: 13px; color: #a0aec0;">กำลังโหลดข้อมูล...</p>
+  </div>
+
+  <!-- ================= TAB 1: MATCH CENTER ================= -->
+  <div id="view-match" class="tab-view active" style="display: none;">
+    <!-- Match Scoreboard -->
     <div class="match-header">
       <div class="status-badge" id="m-status">PREMIER LEAGUE</div>
       <div class="score-row">
@@ -149,6 +133,7 @@
       </div>
     </div>
 
+    <!-- Timeline Section -->
     <div class="section-card" id="timeline-section">
       <div class="section-title">⏱️ เหตุการณ์สำคัญในเกม (Timeline)</div>
       <div class="timeline-container" id="timeline-list">
@@ -156,6 +141,7 @@
       </div>
     </div>
 
+    <!-- 2D Pitch Section -->
     <div class="section-card">
       <div class="section-title">🏟️ ผัง 11 ตัวจริงบนสนาม 2D</div>
       <div class="team-switch-bar">
@@ -170,9 +156,39 @@
       </div>
     </div>
 
+    <!-- Match Stats -->
     <div class="section-card" id="stats-section">
       <div class="section-title">📊 สถิติเกมสด (Match Stats)</div>
       <div id="stats-list"></div>
+    </div>
+  </div>
+
+  <!-- ================= TAB 2: STANDINGS ================= -->
+  <div id="view-standings" class="tab-view">
+    <div class="section-card">
+      <div class="section-title">🏆 ตารางคะแนนพรีเมียร์ลีก (Standings)</div>
+      <div class="table-responsive">
+        <table class="standings-tbl">
+          <thead>
+            <tr>
+              <th style="width: 25px;">#</th>
+              <th>สโมสร</th>
+              <th>แข่ง</th>
+              <th>+/-</th>
+              <th style="color:#00ff85;">แต้ม</th>
+            </tr>
+          </thead>
+          <tbody id="standings-tbody"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+
+  <!-- ================= TAB 3: FIXTURES ================= -->
+  <div id="view-fixtures" class="tab-view">
+    <div class="section-card">
+      <div class="section-title">📅 แมตช์วันนี้ & ผลบอลสด (แตะเพื่อดูผัง 2D)</div>
+      <div id="fixtures-list"></div>
     </div>
   </div>
 
@@ -180,7 +196,28 @@
     const LIFF_ID = "2011335665-i2smhkIR";
     let matchData = null;
     let homeTeamId = null, awayTeamId = null;
+    let currentMatchId = "700500";
     const playerPhotoCache = {};
+    let standingsLoaded = false;
+    let fixturesLoaded = false;
+
+    function switchTab(tab) {
+      document.querySelectorAll(".nav-tab-btn").forEach(b => b.classList.remove("active"));
+      document.querySelectorAll(".tab-view").forEach(v => v.style.display = "none");
+
+      if (tab === 'match') {
+        document.getElementById("tab-btn-match").classList.add("active");
+        document.getElementById("view-match").style.display = "block";
+      } else if (tab === 'standings') {
+        document.getElementById("tab-btn-standings").classList.add("active");
+        document.getElementById("view-standings").style.display = "block";
+        if (!standingsLoaded) loadStandings();
+      } else if (tab === 'fixtures') {
+        document.getElementById("tab-btn-fixtures").classList.add("active");
+        document.getElementById("view-fixtures").style.display = "block";
+        if (!fixturesLoaded) loadFixtures();
+      }
+    }
 
     async function initApp() {
       try {
@@ -198,14 +235,24 @@
           params = new URLSearchParams(stateQuery);
         }
 
-        const matchId = params.get('id') || "700500";
-        await loadMatchDetails(matchId);
+        const typeParam = params.get('type');
+        currentMatchId = params.get('id') || "700500";
+
+        if (typeParam === 'standings') {
+          switchTab('standings');
+          loadMatchDetails(currentMatchId);
+        } else if (typeParam === 'fixtures') {
+          switchTab('fixtures');
+          loadMatchDetails(currentMatchId);
+        } else {
+          switchTab('match');
+          await loadMatchDetails(currentMatchId);
+        }
       } catch (err) {
         document.getElementById("loader").innerHTML = `<p style="color:#e74c3c;">เกิดข้อผิดพลาด: ${err.message}</p>`;
       }
     }
 
-    // ดึงรูปหน้าจริงของนักเตะผ่าน Wikipedia Open API (Batch Request 11 คน)
     async function fetchWikipediaPhotos(playerNames) {
       const needed = playerNames.filter(name => name && !playerPhotoCache[name]);
       if (needed.length === 0) return;
@@ -235,13 +282,12 @@
             }
           });
         }
-      } catch (err) {
-        console.log("Photo fetch error:", err);
-      }
+      } catch (err) {}
     }
 
     async function loadMatchDetails(matchId) {
       try {
+        document.getElementById("loader").style.display = "block";
         const res = await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/eng.1/summary?event=${matchId}`);
         matchData = await res.json();
 
@@ -270,7 +316,6 @@
         renderStats();
 
         document.getElementById("loader").style.display = "none";
-        document.getElementById("main-content").style.display = "block";
       } catch (e) {
         document.getElementById("loader").innerHTML = `<p style="color:#e74c3c;">ไม่พบข้อมูลผังผู้เล่นสำหรับคู่นี้</p>`;
       }
@@ -284,6 +329,10 @@
         document.getElementById("timeline-section").style.display = "none";
         return;
       }
+      document.getElementById("timeline-section").style.display = "block";
+
+      const oldItems = container.querySelectorAll(".timeline-item");
+      oldItems.forEach(i => i.remove());
 
       keyEvents.forEach(k => {
         const clock = k.clock ? k.clock.displayValue : "";
@@ -323,7 +372,6 @@
             <div class="t-right"><span class="t-icon">${icon}</span><span>${playerName}${extra}</span></div>
           `;
         }
-
         container.appendChild(row);
       });
     }
@@ -344,7 +392,6 @@
       const starters = (rosterObj.roster || []).filter(p => p.starter === true);
       if (starters.length === 0) return;
 
-      // ส่งชื่อเต็มเพื่อดึงรูปจาก Wikipedia ก่อนเรนเดอร์
       const playerNames = starters.map(p => p.athlete ? p.athlete.displayName : "");
       await fetchWikipediaPhotos(playerNames);
 
@@ -385,10 +432,8 @@
             </div>
             <div class="player-name">${pName}</div>
           `;
-
           rowDiv.appendChild(pDiv);
         });
-
         pitch.appendChild(rowDiv);
       });
     }
@@ -427,6 +472,7 @@
         document.getElementById("stats-section").style.display = "none";
         return;
       }
+      document.getElementById("stats-section").style.display = "block";
 
       const tHome = matchData.boxscore.teams.find(t => t.homeAway === "home") || matchData.boxscore.teams[0];
       const tAway = matchData.boxscore.teams.find(t => t.homeAway === "away") || matchData.boxscore.teams[1];
@@ -466,6 +512,130 @@
         `;
         statsList.appendChild(row);
       });
+    }
+
+    // ================= LOAD STANDINGS (TAB 2) =================
+    async function loadStandings() {
+      try {
+        const tbody = document.getElementById("standings-tbody");
+        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px; color:#a0aec0;">กำลังโหลดตารางคะแนน...</td></tr>`;
+
+        const res = await fetch("https://site.web.api.espn.com/apis/v2/sports/soccer/eng.1/standings");
+        const data = await res.json();
+        const entries = (data.children && data.children[0] && data.children[0].standings && data.children[0].standings.entries) || [];
+
+        tbody.innerHTML = "";
+        entries.forEach((e, index) => {
+          const rank = index + 1;
+          const name = e.team.shortDisplayName || e.team.name;
+          const logo = (e.team.logos && e.team.logos[0]) ? e.team.logos[0].href : "";
+
+          const getStat = (n) => {
+            const s = (e.stats || []).find(st => st.name === n || st.type === n);
+            return s ? s.displayValue || s.value : "0";
+          };
+
+          const p = getStat("gamesPlayed");
+          const diff = getStat("pointDifferential") || getStat("goalDifference");
+          const pts = getStat("points");
+
+          let rankClass = "";
+          if (rank <= 4) rankClass = "rank-top4";
+          if (rank >= 18) rankClass = "rank-rel";
+
+          const tr = document.createElement("tr");
+          tr.className = rankClass;
+          tr.innerHTML = `
+            <td style="font-weight:bold; color:${rank <= 4 ? '#3498db' : (rank >= 18 ? '#e74c3c' : '#fff')};">${rank}</td>
+            <td class="team-name-cell">
+              <img src="${logo}" referrerpolicy="no-referrer">
+              <span>${name}</span>
+            </td>
+            <td style="color:#a0aec0;">${p}</td>
+            <td style="color:#a0aec0;">${diff > 0 ? '+' + diff : diff}</td>
+            <td style="font-weight:900; color:#00ff85;">${pts}</td>
+          `;
+          tbody.appendChild(tr);
+        });
+
+        standingsLoaded = true;
+      } catch (e) {
+        document.getElementById("standings-tbody").innerHTML = `<tr><td colspan="5" style="color:#e74c3c;">ไม่สามารถโหลดตารางคะแนนได้</td></tr>`;
+      }
+    }
+
+    // ================= LOAD FIXTURES & LIVE SCORES (TAB 3) =================
+    async function loadFixtures() {
+      try {
+        const listDiv = document.getElementById("fixtures-list");
+        listDiv.innerHTML = `<div style="text-align:center; padding: 20px; color:#a0aec0;">กำลังโหลดโปรแกรมการแข่งขัน...</div>`;
+
+        const res = await fetch("https://site.web.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard");
+        const data = await res.json();
+        const events = data.events || [];
+
+        if (events.length === 0) {
+          listDiv.innerHTML = `<div style="text-align:center; padding: 20px; color:#a0aec0;">ไม่มีโปรแกรมแข่งขันในช่วงนี้</div>`;
+          return;
+        }
+
+        listDiv.innerHTML = "";
+        events.forEach(evt => {
+          const comp = evt.competitions && evt.competitions[0];
+          if (!comp) return;
+
+          const home = comp.competitors.find(c => c.homeAway === "home");
+          const away = comp.competitors.find(c => c.homeAway === "away");
+          if (!home || !away) return;
+
+          const hName = home.team.shortDisplayName || home.team.name;
+          const aName = away.team.shortDisplayName || away.team.name;
+          const hLogo = home.team.logo || (home.team.logos ? home.team.logos[0].href : "");
+          const aLogo = away.team.logo || (away.team.logos ? away.team.logos[0].href : "");
+
+          const state = evt.status ? evt.status.type.state : "pre";
+          const statusDetail = evt.status ? evt.status.type.shortDetail : "";
+
+          let scoreDisplay = "VS";
+          let statusBadge = `<span class="f-status">${statusDetail}</span>`;
+
+          if (state === "in") {
+            scoreDisplay = `${home.score || 0} - ${away.score || 0}`;
+            statusBadge = `<span class="f-status" style="color:#e74c3c; font-weight:bold;">🔴 ${evt.status.displayClock || 'LIVE'}</span>`;
+          } else if (state === "post") {
+            scoreDisplay = `${home.score || 0} - ${away.score || 0}`;
+            statusBadge = `<span class="f-status" style="color:#00ff85; font-weight:bold;">FT</span>`;
+          }
+
+          const card = document.createElement("div");
+          card.className = "fixture-card";
+          card.onclick = () => {
+            currentMatchId = evt.id;
+            switchTab('match');
+            loadMatchDetails(evt.id);
+          };
+
+          card.innerHTML = `
+            <div class="f-team">
+              <img src="${hLogo}" referrerpolicy="no-referrer">
+              <span>${hName}</span>
+            </div>
+            <div class="f-center">
+              <div class="f-score">${scoreDisplay}</div>
+              ${statusBadge}
+            </div>
+            <div class="f-team away">
+              <span>${aName}</span>
+              <img src="${aLogo}" referrerpolicy="no-referrer">
+            </div>
+          `;
+          listDiv.appendChild(card);
+        });
+
+        fixturesLoaded = true;
+      } catch (e) {
+        document.getElementById("fixtures-list").innerHTML = `<div style="color:#e74c3c; text-align:center;">ไม่สามารถโหลดโปรแกรมการแข่งขันได้</div>`;
+      }
     }
 
     initApp();
