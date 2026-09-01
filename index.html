@@ -332,19 +332,38 @@
           const badgeColor = isGK ? "#000" : (side === "away" ? "#fff" : "#000");
           const discClass = isGK ? "player-disc gk" : (side === "away" ? "player-disc away" : "player-disc home");
 
-          // ดึงภาพถ่ายพอร์ตเทรตตรงจาก ESPN CDN
-          const photoUrl = pId ? `https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/${pId}.png&w=120&h=120&scale=crop` : "";
+          // ดึงภาพถ่ายพอร์ตเทรตโดยตรงจาก Static URL (ไม่ผ่าน Combiner)
+          let photoUrl = "";
+          if (p.athlete && p.athlete.headshot && p.athlete.headshot.href) {
+            photoUrl = p.athlete.headshot.href;
+          } else if (pId) {
+            photoUrl = `https://a.espncdn.com/i/headshots/soccer/players/full/${pId}.png`;
+          }
 
-          pDiv.innerHTML = `
-            <div class="player-avatar-wrap">
-              <div class="${discClass}">${pNum}</div>
-              <img class="player-photo" src="${photoUrl}" referrerpolicy="no-referrer"
-                   onload="this.style.display='block'; this.parentElement.querySelector('.player-badge').style.display='flex'; this.parentElement.querySelector('.player-disc').style.display='none';"
-                   onerror="this.remove();">
-              <div class="player-badge" style="background:${badgeBg}; color:${badgeColor};">${pNum}</div>
-            </div>
-            <div class="player-name">${pName}</div>
-          `;
+          // กรองรูปเงาเทาของ ESPN ทิ้งทันที (ไม่ให้โหลด)
+          if (photoUrl.includes("nophoto") || photoUrl.includes("blank")) {
+            photoUrl = "";
+          }
+
+          if (photoUrl !== "") {
+            pDiv.innerHTML = `
+              <div class="player-avatar-wrap">
+                <div class="${discClass}">${pNum}</div>
+                <img class="player-photo" src="${photoUrl}" referrerpolicy="no-referrer"
+                     onload="if(this.naturalWidth > 20) { this.style.display='block'; this.parentElement.querySelector('.player-badge').style.display='flex'; this.parentElement.querySelector('.player-disc').style.display='none'; } else { this.remove(); }"
+                     onerror="this.remove();">
+                <div class="player-badge" style="background:${badgeBg}; color:${badgeColor};">${pNum}</div>
+              </div>
+              <div class="player-name">${pName}</div>
+            `;
+          } else {
+            pDiv.innerHTML = `
+              <div class="player-avatar-wrap">
+                <div class="${discClass}">${pNum}</div>
+              </div>
+              <div class="player-name">${pName}</div>
+            `;
+          }
 
           rowDiv.appendChild(pDiv);
         });
