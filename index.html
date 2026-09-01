@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>PL Match Center</title>
+  <title>PL Match Center 2D</title>
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -18,7 +18,7 @@
     .team-col .name { font-size: 12px; font-weight: bold; margin-top: 4px; }
     .score-box { font-size: 24px; font-weight: 900; color: #fff; flex: 0.8; text-align: center; letter-spacing: 2px; }
 
-    /* Timeline Split Section (ซ้าย-ขวา) */
+    /* Timeline Section */
     .section-card { background: #161b26; border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.05); }
     .section-title { font-size: 13px; color: #00ff85; margin-bottom: 14px; text-align: center; font-weight: bold; }
     
@@ -32,17 +32,19 @@
     .t-icon { font-size: 14px; }
 
     /* 2D Football Pitch */
-    .pitch-container { position: relative; width: 100%; aspect-ratio: 2 / 3; max-width: 400px; margin: 0 auto; background: repeating-linear-gradient(0deg, #1b5e20, #1b5e20 10%, #1e6b24 10%, #1e6b24 20%); border: 2px solid rgba(255,255,255,0.7); border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.6); display: flex; flex-direction: column; justify-content: space-between; padding: 16px 8px; }
+    .pitch-container { position: relative; width: 100%; aspect-ratio: 2 / 3; max-width: 400px; margin: 0 auto; background: repeating-linear-gradient(0deg, #1b5e20, #1b5e20 10%, #1e6b24 10%, #1e6b24 20%); border: 2px solid rgba(255,255,255,0.7); border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.6); display: flex; flex-direction: column; justify-content: space-between; padding: 14px 6px; }
     .pitch-center-line { position: absolute; top: 50%; left: 0; right: 0; height: 2px; background: rgba(255,255,255,0.5); }
     .pitch-center-circle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70px; height: 70px; border: 2px solid rgba(255,255,255,0.5); border-radius: 50%; }
     .pitch-box-top { position: absolute; top: 0; left: 20%; right: 20%; height: 16%; border: 2px solid rgba(255,255,255,0.5); border-top: none; }
     .pitch-box-bottom { position: absolute; bottom: 0; left: 20%; right: 20%; height: 16%; border: 2px solid rgba(255,255,255,0.5); border-bottom: none; }
 
     .formation-row { position: relative; z-index: 2; display: flex; justify-content: space-around; align-items: center; width: 100%; }
+    
+    /* Player Node with Real Face */
     .player-node { display: flex; flex-direction: column; align-items: center; width: 68px; }
-    .player-shirt { width: 28px; height: 28px; background: #e74c3c; border: 2px solid #fff; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 900; color: #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.5); }
-    .player-shirt.away { background: #3498db; }
-    .player-shirt.gk { background: #f1c40f; color: #000; }
+    .player-avatar-wrap { position: relative; width: 36px; height: 36px; display: flex; align-items: center; justify-content: center; }
+    .player-photo { width: 36px; height: 36px; border-radius: 50%; object-fit: cover; background: #2c3e50; border: 2px solid #fff; box-shadow: 0 2px 6px rgba(0,0,0,0.6); }
+    .player-badge { position: absolute; bottom: -2px; right: -2px; width: 16px; height: 16px; border-radius: 50%; background: #00ff85; color: #000; font-size: 9px; font-weight: 900; display: flex; align-items: center; justify-content: center; border: 1px solid #fff; box-shadow: 0 1px 3px rgba(0,0,0,0.5); }
     .player-name { font-size: 10px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.75); padding: 2px 5px; border-radius: 4px; margin-top: 3px; max-width: 65px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
 
     .team-switch-bar { display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; }
@@ -93,11 +95,10 @@
       <div class="section-title">⏱️ เหตุการณ์สำคัญในเกม (Timeline)</div>
       <div class="timeline-container" id="timeline-list">
         <div class="timeline-line"></div>
-        <!-- รายการประตู/ใบเหลือง/ใบแดง จะถูกเพิ่มที่นี่ -->
       </div>
     </div>
 
-    <!-- 2D Pitch Section -->
+    <!-- 2D Pitch Section with Real Faces -->
     <div class="section-card">
       <div class="section-title">🏟️ ผัง 11 ตัวจริงบนสนาม 2D</div>
       <div class="team-switch-bar">
@@ -121,6 +122,7 @@
 
   <script>
     const LIFF_ID = "2011335665-i2smhkIR";
+    const FALLBACK_AVATAR = "https://a.espncdn.com/combiner/i?img=/i/headshots/nophoto.png&w=96&h=96&scale=crop";
     let matchData = null;
     let homeTeamId = null, awayTeamId = null;
 
@@ -152,7 +154,6 @@
         const res = await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/eng.1/summary?event=${matchId}`);
         matchData = await res.json();
 
-        // 1. Render Scoreboard
         const comp = matchData.header.competitions[0];
         const home = comp.competitors.find(c => c.homeAway === "home");
         const away = comp.competitors.find(c => c.homeAway === "away");
@@ -173,13 +174,8 @@
         const scoreA = away.score !== undefined ? away.score : "";
         document.getElementById("m-score-val").innerText = scoreA !== "" ? `${scoreH} - ${scoreA}` : "VS";
 
-        // 2. Render Timeline (แบ่งซ้าย-ขวา)
         renderTimeline();
-
-        // 3. Render 2D Pitch
         renderTeamPitch("home");
-
-        // 4. Render Match Stats
         renderStats();
 
         document.getElementById("loader").style.display = "none";
@@ -273,12 +269,23 @@
           const pDiv = document.createElement("div");
           pDiv.className = "player-node";
 
-          const shirtClass = isGK ? "player-shirt gk" : (side === "away" ? "player-shirt away" : "player-shirt");
           const pName = p.athlete ? (p.athlete.shortName || p.athlete.displayName) : (p.jersey || "P");
-          const pNum = p.jersey || "";
+          const pNum = p.jersey || "-";
+          const pId = p.athlete ? p.athlete.id : null;
+          
+          // ลิงก์รูปถ่ายนักเตะจากเซิร์ฟเวอร์ ESPN
+          const photoUrl = p.athlete && p.athlete.headshot 
+            ? p.athlete.headshot.href 
+            : (pId ? `https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/${pId}.png&w=96&h=96&scale=crop` : FALLBACK_AVATAR);
+
+          const badgeBg = isGK ? "#f1c40f" : (side === "away" ? "#3498db" : "#00ff85");
+          const badgeColor = isGK ? "#000" : (side === "away" ? "#fff" : "#000");
 
           pDiv.innerHTML = `
-            <div class="${shirtClass}">${pNum}</div>
+            <div class="player-avatar-wrap">
+              <img class="player-photo" src="${photoUrl}" onerror="this.src='${FALLBACK_AVATAR}'">
+              <div class="player-badge" style="background:${badgeBg}; color:${badgeColor};">${pNum}</div>
+            </div>
             <div class="player-name">${pName}</div>
           `;
           rowDiv.appendChild(pDiv);
