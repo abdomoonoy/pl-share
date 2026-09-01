@@ -45,19 +45,19 @@
     .player-node { display: flex; flex-direction: column; align-items: center; width: 70px; }
     .player-avatar-wrap { position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
     
-    /* Photo Element (เริ่มต้นซ่อนไว้) */
+    /* Real Player Face */
     .player-photo { 
       width: 44px; 
       height: 44px; 
       border-radius: 50%; 
       object-fit: cover; 
-      background: #ffffff; 
+      background: #232a3b; 
       border: 2px solid #ffffff; 
       box-shadow: 0 3px 8px rgba(0,0,0,0.6);
       display: none; 
     }
     
-    /* Mini Badge (เริ่มต้นซ่อนไว้ - แสดงเฉพาะเมื่อมีรูปคน) */
+    /* Mini Number Badge */
     .player-badge { 
       position: absolute; 
       bottom: -2px; 
@@ -76,7 +76,7 @@
       z-index: 4; 
     }
 
-    /* Fallback Disc (แสดงเป็นค่าเริ่มต้น - เบอร์เดียวตรงกลาง) */
+    /* Fallback Disc */
     .player-disc {
       width: 42px;
       height: 42px;
@@ -180,6 +180,7 @@
     const LIFF_ID = "2011335665-i2smhkIR";
     let matchData = null;
     let homeTeamId = null, awayTeamId = null;
+    const playerPhotoCache = {};
 
     async function initApp() {
       try {
@@ -201,6 +202,41 @@
         await loadMatchDetails(matchId);
       } catch (err) {
         document.getElementById("loader").innerHTML = `<p style="color:#e74c3c;">เกิดข้อผิดพลาด: ${err.message}</p>`;
+      }
+    }
+
+    // ดึงรูปหน้าจริงของนักเตะผ่าน Wikipedia Open API (Batch Request 11 คน)
+    async function fetchWikipediaPhotos(playerNames) {
+      const needed = playerNames.filter(name => name && !playerPhotoCache[name]);
+      if (needed.length === 0) return;
+
+      try {
+        const titlesParam = needed.map(n => encodeURIComponent(n)).join("|");
+        const url = `https://en.wikipedia.org/w/api.php?action=query&titles=${titlesParam}&prop=pageimages&pithumbsize=150&redirects=1&format=json&origin=*`;
+        const res = await fetch(url);
+        const data = await res.json();
+
+        if (data && data.query) {
+          const pages = data.query.pages || {};
+          const redirects = data.query.redirects || [];
+          const normalized = data.query.normalized || [];
+
+          const nameMap = {};
+          needed.forEach(orig => { nameMap[orig.toLowerCase()] = orig; });
+          normalized.forEach(n => { nameMap[n.to.toLowerCase()] = n.from; });
+          redirects.forEach(r => { nameMap[r.to.toLowerCase()] = nameMap[r.from.toLowerCase()] || r.from; });
+
+          Object.values(pages).forEach(page => {
+            if (page.thumbnail && page.thumbnail.source) {
+              const pTitleLower = page.title.toLowerCase();
+              const origName = nameMap[pTitleLower] || page.title;
+              playerPhotoCache[origName] = page.thumbnail.source;
+              playerPhotoCache[page.title] = page.thumbnail.source;
+            }
+          });
+        }
+      } catch (err) {
+        console.log("Photo fetch error:", err);
       }
     }
 
@@ -230,7 +266,7 @@
         document.getElementById("m-score-val").innerText = scoreA !== "" ? `${scoreH} - ${scoreA}` : "VS";
 
         renderTimeline();
-        renderTeamPitch("home");
+        await renderTeamPitch("home");
         renderStats();
 
         document.getElementById("loader").style.display = "none";
@@ -292,7 +328,7 @@
       });
     }
 
-    function renderTeamPitch(side) {
+    async function renderTeamPitch(side) {
       document.getElementById("btn-team-h").className = side === "home" ? "team-chip active" : "team-chip";
       document.getElementById("btn-team-a").className = side === "away" ? "team-chip active" : "team-chip";
 
@@ -307,6 +343,10 @@
       
       const starters = (rosterObj.roster || []).filter(p => p.starter === true);
       if (starters.length === 0) return;
+
+      // ส่งชื่อเต็มเพื่อดึงรูปจาก Wikipedia ก่อนเรนเดอร์
+      const playerNames = starters.map(p => p.athlete ? p.athlete.displayName : "");
+      await fetchWikipediaPhotos(playerNames);
 
       const formCounts = [1, ...formationStr.split('-').map(n => parseInt(n, 10))];
       let playerIndex = 0;
@@ -324,6 +364,7 @@
           const pDiv = document.createElement("div");
           pDiv.className = "player-node";
 
+          const fullName = p.athlete ? p.athlete.displayName : "";
           const pName = p.athlete ? (p.athlete.shortName || p.athlete.displayName) : (p.jersey || "P");
           const pNum = p.jersey || "-";
           const pId = p.athlete ? p.athlete.id : null;
@@ -332,44 +373,50 @@
           const badgeColor = isGK ? "#000" : (side === "away" ? "#fff" : "#000");
           const discClass = isGK ? "player-disc gk" : (side === "away" ? "player-disc away" : "player-disc home");
 
-          // ดึงภาพถ่ายพอร์ตเทรตโดยตรงจาก Static URL (ไม่ผ่าน Combiner)
-          let photoUrl = "";
-          if (p.athlete && p.athlete.headshot && p.athlete.headshot.href) {
-            photoUrl = p.athlete.headshot.href;
-          } else if (pId) {
-            photoUrl = `https://a.espncdn.com/i/headshots/soccer/players/full/${pId}.png`;
-          }
+          const photoUrl = playerPhotoCache[fullName] || (pId ? `https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/${pId}.png&w=120&h=120&scale=crop` : "");
 
-          // กรองรูปเงาเทาของ ESPN ทิ้งทันที (ไม่ให้โหลด)
-          if (photoUrl.includes("nophoto") || photoUrl.includes("blank")) {
-            photoUrl = "";
-          }
-
-          if (photoUrl !== "") {
-            pDiv.innerHTML = `
-              <div class="player-avatar-wrap">
-                <div class="${discClass}">${pNum}</div>
-                <img class="player-photo" src="${photoUrl}" referrerpolicy="no-referrer"
-                     onload="if(this.naturalWidth > 20) { this.style.display='block'; this.parentElement.querySelector('.player-badge').style.display='flex'; this.parentElement.querySelector('.player-disc').style.display='none'; } else { this.remove(); }"
-                     onerror="this.remove();">
-                <div class="player-badge" style="background:${badgeBg}; color:${badgeColor};">${pNum}</div>
-              </div>
-              <div class="player-name">${pName}</div>
-            `;
-          } else {
-            pDiv.innerHTML = `
-              <div class="player-avatar-wrap">
-                <div class="${discClass}">${pNum}</div>
-              </div>
-              <div class="player-name">${pName}</div>
-            `;
-          }
+          pDiv.innerHTML = `
+            <div class="player-avatar-wrap">
+              <div class="${discClass}">${pNum}</div>
+              <img class="player-photo" src="${photoUrl}" referrerpolicy="no-referrer"
+                   onload="onPhotoSuccess(this)"
+                   onerror="onPhotoError(this)">
+              <div class="player-badge" style="background:${badgeBg}; color:${badgeColor};">${pNum}</div>
+            </div>
+            <div class="player-name">${pName}</div>
+          `;
 
           rowDiv.appendChild(pDiv);
         });
 
         pitch.appendChild(rowDiv);
       });
+    }
+
+    function onPhotoSuccess(img) {
+      if (img.naturalWidth > 15 && !img.src.includes("nophoto") && !img.src.includes("blank")) {
+        img.style.display = "block";
+        const wrap = img.parentElement;
+        if (wrap) {
+          const disc = wrap.querySelector(".player-disc");
+          const badge = wrap.querySelector(".player-badge");
+          if (disc) disc.style.display = "none";
+          if (badge) badge.style.display = "flex";
+        }
+      } else {
+        onPhotoError(img);
+      }
+    }
+
+    function onPhotoError(img) {
+      img.remove();
+      const wrap = img.parentElement;
+      if (wrap) {
+        const badge = wrap.querySelector(".player-badge");
+        if (badge) badge.remove();
+        const disc = wrap.querySelector(".player-disc");
+        if (disc) disc.style.display = "flex";
+      }
     }
 
     function renderStats() {
