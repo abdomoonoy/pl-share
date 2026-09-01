@@ -166,7 +166,7 @@
 
       <div class="pitch-action-bar">
         <button class="action-btn btn-save" onclick="savePitchAsImage()">📥 บันทึกเป็นรูปภาพ</button>
-        <button class="action-btn btn-share" onclick="shareMatchCard()">📤 ส่งเข้าแชท LINE</button>
+        <button class="action-btn btn-share" onclick="shareCurrentMatch()">📤 แชร์ผังนี้ให้เพื่อน</button>
       </div>
     </div>
 
@@ -249,11 +249,11 @@
           params = new URLSearchParams(stateQuery);
         }
 
-        // ตรวจจับว่าเป็นการกดปุ่ม "แชร์การ์ดให้เพื่อน" หรือไม่
+        // หากเป็นการกดมาจากปุ่ม "แชร์การ์ดให้เพื่อน" บน LINE
         if (params.has('t') && params.has('hn')) {
-          document.getElementById("loader-text").innerText = "กำลังเปิดหน้าต่างแชร์การ์ด...";
-          const isShared = await handleDirectCardShare(params);
-          if (isShared) return;
+          document.getElementById("loader-text").innerText = "กำลังเปิดหน้าต่างแชร์...";
+          await executeDirectShare(params);
+          return;
         }
 
         const typeParam = params.get('type');
@@ -274,27 +274,22 @@
       }
     }
 
-    // ฟังก์ชันยิงหน้าต่าง Share Target Picker อัตโนมัติเมื่อกดจากปุ่มการ์ด
-    async function handleDirectCardShare(params) {
-      if (!liff.isLoggedIn()) {
-        liff.login();
-        return false;
-      }
-
+    // ฟังก์ชันช่วยส่ง Flex Message ผ่าน Share Target Picker
+    async function executeDirectShare(params) {
       if (!liff.isApiAvailable("shareTargetPicker")) {
-        alert("กรุณาเปิดลิงก์ผ่านแอป LINE เพื่อใช้งานการแชร์");
-        return false;
+        alert("ยังไม่ได้เปิดใช้งาน Share Target Picker ใน LINE Developers หรืออุปกรณ์นี้ไม่รองรับ");
+        return;
       }
 
       const title = params.get('t') || "MATCH UPDATE";
       const headerColor = "#" + (params.get('c') || "38003c");
       const homeName = params.get('hn') || "Home";
-      const homeLogo = params.get('hl') || "";
+      const homeLogo = params.get('hl') || "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png";
       const awayName = params.get('an') || "Away";
-      const awayLogo = params.get('al') || "";
-      const scoreH = params.get('sh') || "";
-      const scoreA = params.get('sa') || "";
-      const detail = params.get('dt') || "";
+      const awayLogo = params.get('al') || "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png";
+      const scoreH = params.get('sh') || "0";
+      const scoreA = params.get('sa') || "0";
+      const detail = params.get('dt') || "ติดตามผลบอลสดและผัง 11 ตัวจริง 2D ได้ที่นี่";
       const matchId = params.get('id') || currentMatchId;
       const centerText = scoreA !== "" ? `${scoreH} - ${scoreA}` : scoreH;
 
@@ -302,111 +297,165 @@
       const shareUri = `https://liff.line.me/${LIFF_ID}?${shareParams}`;
       const pitchUri = `https://liff.line.me/${LIFF_ID}?id=${matchId}`;
 
-      const res = await liff.shareTargetPicker([
-        {
-          "type": "flex",
-          "altText": `${title}: ${homeName} vs ${awayName}`,
-          "contents": {
-            "type": "bubble",
-            "size": "kilo",
-            "header": {
-              "type": "box",
-              "layout": "vertical",
-              "backgroundColor": headerColor,
-              "contents": [
-                { "type": "text", "text": title, "color": "#ffffff", "weight": "bold", "size": "md", "align": "center" }
-              ]
-            },
-            "body": {
-              "type": "box",
-              "layout": "vertical",
-              "contents": [
-                {
-                  "type": "box",
-                  "layout": "horizontal",
-                  "alignItems": "center",
-                  "contents": [
-                    {
-                      "type": "box",
-                      "layout": "vertical",
-                      "alignItems": "center",
-                      "flex": 4,
-                      "contents": [
-                        { "type": "image", "url": homeLogo, "size": "40px", "aspectMode": "fit" },
-                        { "type": "text", "text": homeName, "size": "xs", "weight": "bold", "wrap": true, "align": "center", "margin": "sm" }
-                      ]
-                    },
-                    {
-                      "type": "box",
-                      "layout": "vertical",
-                      "alignItems": "center",
-                      "flex": 3,
-                      "contents": [
-                        { "type": "text", "text": centerText, "size": "lg", "weight": "bold", "align": "center" },
-                        { "type": "text", "text": "PL", "size": "xxs", "color": "#aaaaaa" }
-                      ]
-                    },
-                    {
-                      "type": "box",
-                      "layout": "vertical",
-                      "alignItems": "center",
-                      "flex": 4,
-                      "contents": [
-                        { "type": "image", "url": awayLogo, "size": "40px", "aspectMode": "fit" },
-                        { "type": "text", "text": awayName, "size": "xs", "weight": "bold", "wrap": true, "align": "center", "margin": "sm" }
-                      ]
+      try {
+        const res = await liff.shareTargetPicker([
+          {
+            "type": "flex",
+            "altText": `${title}: ${homeName} vs ${awayName}`,
+            "contents": {
+              "type": "bubble",
+              "size": "kilo",
+              "header": {
+                "type": "box",
+                "layout": "vertical",
+                "backgroundColor": headerColor,
+                "contents": [
+                  { "type": "text", "text": title, "color": "#ffffff", "weight": "bold", "size": "md", "align": "center" }
+                ]
+              },
+              "body": {
+                "type": "box",
+                "layout": "vertical",
+                "contents": [
+                  {
+                    "type": "box",
+                    "layout": "horizontal",
+                    "alignItems": "center",
+                    "contents": [
+                      {
+                        "type": "box",
+                        "layout": "vertical",
+                        "alignItems": "center",
+                        "flex": 4,
+                        "contents": [
+                          { "type": "image", "url": homeLogo, "size": "xs", "aspectMode": "fit" },
+                          { "type": "text", "text": homeName, "size": "xs", "weight": "bold", "wrap": true, "align": "center", "margin": "sm" }
+                        ]
+                      },
+                      {
+                        "type": "box",
+                        "layout": "vertical",
+                        "alignItems": "center",
+                        "flex": 3,
+                        "contents": [
+                          { "type": "text", "text": centerText, "size": "lg", "weight": "bold", "align": "center" },
+                          { "type": "text", "text": "PL", "size": "xxs", "color": "#aaaaaa" }
+                        ]
+                      },
+                      {
+                        "type": "box",
+                        "layout": "vertical",
+                        "alignItems": "center",
+                        "flex": 4,
+                        "contents": [
+                          { "type": "image", "url": awayLogo, "size": "xs", "aspectMode": "fit" },
+                          { "type": "text", "text": awayName, "size": "xs", "weight": "bold", "wrap": true, "align": "center", "margin": "sm" }
+                        ]
+                      }
+                    ]
+                  },
+                  { "type": "separator", "margin": "md" },
+                  {
+                    "type": "box",
+                    "layout": "vertical",
+                    "margin": "md",
+                    "contents": [
+                      { "type": "text", "text": detail, "size": "xs", "color": "#2c3e50", "weight": "bold", "wrap": true, "align": "center" }
+                    ]
+                  }
+                ]
+              },
+              "footer": {
+                "type": "box",
+                "layout": "vertical",
+                "spacing": "sm",
+                "contents": [
+                  {
+                    "type": "button",
+                    "style": "primary",
+                    "height": "sm",
+                    "color": "#1b5e20",
+                    "action": {
+                      "type": "uri",
+                      "label": "🏟️ ผัง 11 ตัวจริงบนสนาม 2D",
+                      "uri": pitchUri
                     }
-                  ]
-                },
-                { "type": "separator", "margin": "md" },
-                {
-                  "type": "box",
-                  "layout": "vertical",
-                  "margin": "md",
-                  "contents": [
-                    { "type": "text", "text": detail, "size": "xs", "color": "#2c3e50", "weight": "bold", "wrap": true, "align": "center" }
-                  ]
-                }
-              ]
-            },
-            "footer": {
-              "type": "box",
-              "layout": "vertical",
-              "spacing": "sm",
-              "contents": [
-                {
-                  "type": "button",
-                  "style": "primary",
-                  "height": "sm",
-                  "color": "#1b5e20",
-                  "action": {
-                    "type": "uri",
-                    "label": "🏟️ ผัง 11 ตัวจริงบนสนาม 2D",
-                    "uri": pitchUri
+                  },
+                  {
+                    "type": "button",
+                    "style": "secondary",
+                    "height": "sm",
+                    "color": "#f0f2f5",
+                    "action": {
+                      "type": "uri",
+                      "label": "แชร์การ์ดให้เพื่อน ↗️",
+                      "uri": shareUri
+                    }
                   }
-                },
-                {
-                  "type": "button",
-                  "style": "secondary",
-                  "height": "sm",
-                  "color": "#f0f2f5",
-                  "action": {
-                    "type": "uri",
-                    "label": "แชร์การ์ดให้เพื่อน ↗️",
-                    "uri": shareUri
-                  }
-                }
-              ]
+                ]
+              }
             }
           }
-        }
-      ]);
+        ]);
 
-      if (res) {
-        liff.closeWindow();
-        return true;
+        if (res) {
+          liff.closeWindow();
+        }
+      } catch (err) {
+        alert("เกิดข้อผิดพลาดในการแชร์: " + err.message);
       }
-      return false;
+    }
+
+    // ฟังก์ชันแชร์สำหรับปุ่มบนหน้าเว็บ
+    async function shareCurrentMatch() {
+      if (!liff.isApiAvailable("shareTargetPicker")) {
+        alert("กรุณาเปิดลิงก์ผ่านแอป LINE เพื่อใช้งานการแชร์");
+        return;
+      }
+      
+      const comp = matchData.header.competitions[0];
+      const home = comp.competitors.find(c => c.homeAway === "home");
+      const away = comp.competitors.find(c => c.homeAway === "away");
+      const hName = home.team.shortDisplayName || home.team.name;
+      const aName = away.team.shortDisplayName || away.team.name;
+      const score = (home.score !== undefined && away.score !== undefined) ? `${home.score} - ${away.score}` : "VS";
+
+      try {
+        await liff.shareTargetPicker([
+          {
+            "type": "flex",
+            "altText": `⚽ ผัง 11 ตัวจริง: ${hName} vs ${aName}`,
+            "contents": {
+              "type": "bubble",
+              "size": "kilo",
+              "body": {
+                "type": "box",
+                "layout": "vertical",
+                "backgroundColor": "#161b26",
+                "paddingAll": "16px",
+                "contents": [
+                  { "type": "text", "text": "PREMIER LEAGUE MATCH CENTER", "size": "xxs", "color": "#00ff85", "weight": "bold" },
+                  { "type": "text", "text": `${hName} ${score} ${aName}`, "size": "md", "color": "#ffffff", "weight": "bold", "margin": "md" },
+                  { "type": "separator", "color": "#ffffff22", "margin": "lg" },
+                  {
+                    "type": "button",
+                    "style": "primary",
+                    "color": "#38003c",
+                    "margin": "lg",
+                    "action": {
+                      "type": "uri",
+                      "label": "🏟️ ดูผัง 11 ตัวจริง 2D สด",
+                      "uri": `https://liff.line.me/${LIFF_ID}?id=${currentMatchId}`
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        ]);
+      } catch (err) {
+        alert("ไม่สามารถแชร์ได้: " + err.message);
+      }
     }
 
     async function fetchWikipediaPhotos(playerNames) {
@@ -684,58 +733,6 @@
       } catch (err) {
         alert("ไม่สามารถบันทึกภาพได้ในอุปกรณ์นี้");
       }
-    }
-
-    async function shareMatchCard() {
-      if (!liff.isLoggedIn()) {
-        liff.login();
-        return;
-      }
-
-      if (!liff.isApiAvailable("shareTargetPicker")) {
-        alert("กรุณาเปิดลิงก์ผ่านแอป LINE เพื่อใช้งานการแชร์");
-        return;
-      }
-      
-      const comp = matchData.header.competitions[0];
-      const home = comp.competitors.find(c => c.homeAway === "home");
-      const away = comp.competitors.find(c => c.homeAway === "away");
-      const hName = home.team.shortDisplayName || home.team.name;
-      const aName = away.team.shortDisplayName || away.team.name;
-      const score = (home.score !== undefined && away.score !== undefined) ? `${home.score} - ${away.score}` : "VS";
-
-      await liff.shareTargetPicker([
-        {
-          "type": "flex",
-          "altText": `⚽ ผัง 11 ตัวจริง: ${hName} vs ${aName}`,
-          "contents": {
-            "type": "bubble",
-            "size": "kilo",
-            "body": {
-              "type": "box",
-              "layout": "vertical",
-              "backgroundColor": "#161b26",
-              "paddingAll": "16px",
-              "contents": [
-                { "type": "text", "text": "PREMIER LEAGUE MATCH CENTER", "size": "xxs", "color": "#00ff85", "weight": "bold" },
-                { "type": "text", "text": `${hName} ${score} ${aName}`, "size": "md", "color": "#ffffff", "weight": "bold", "margin": "md" },
-                { "type": "separator", "color": "#ffffff22", "margin": "lg" },
-                {
-                  "type": "button",
-                  "style": "primary",
-                  "color": "#38003c",
-                  "margin": "lg",
-                  "action": {
-                    "type": "uri",
-                    "label": "🏟️ ดูผัง 11 ตัวจริง 2D สด",
-                    "uri": `https://liff.line.me/${LIFF_ID}?id=${currentMatchId}`
-                  }
-                }
-              ]
-            }
-          }
-        }
-      ]);
     }
 
     async function loadStandings() {
