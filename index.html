@@ -6,7 +6,6 @@
   <meta name="referrer" content="no-referrer">
   <title>Premier League Hub</title>
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
-  <!-- ไลบรารีแปลง HTML เป็นรูปภาพ -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -122,12 +121,11 @@
   <!-- Loading State -->
   <div id="loader" class="center-spinner">
     <div class="spin"></div>
-    <p style="font-size: 13px; color: #a0aec0;">กำลังโหลดข้อมูล...</p>
+    <p id="loader-text" style="font-size: 13px; color: #a0aec0;">กำลังโหลดข้อมูล...</p>
   </div>
 
   <!-- ================= TAB 1: MATCH CENTER ================= -->
   <div id="view-match" class="tab-view active" style="display: none;">
-    <!-- Match Scoreboard -->
     <div class="match-header">
       <div class="status-badge" id="m-status">PREMIER LEAGUE</div>
       <div class="score-row">
@@ -143,7 +141,6 @@
       </div>
     </div>
 
-    <!-- Timeline Section -->
     <div class="section-card" id="timeline-section">
       <div class="section-title">⏱️ เหตุการณ์สำคัญในเกม (Timeline)</div>
       <div class="timeline-container" id="timeline-list">
@@ -151,7 +148,6 @@
       </div>
     </div>
 
-    <!-- 2D Pitch Section -->
     <div class="section-card">
       <div class="section-title">🏟️ ผัง 11 ตัวจริงบนสนาม 2D</div>
       <div class="team-switch-bar">
@@ -168,14 +164,12 @@
         </div>
       </div>
 
-      <!-- Action Buttons -->
       <div class="pitch-action-bar">
         <button class="action-btn btn-save" onclick="savePitchAsImage()">📥 บันทึกเป็นรูปภาพ</button>
         <button class="action-btn btn-share" onclick="shareMatchCard()">📤 ส่งเข้าแชท LINE</button>
       </div>
     </div>
 
-    <!-- Match Stats -->
     <div class="section-card" id="stats-section">
       <div class="section-title">📊 สถิติเกมสด (Match Stats)</div>
       <div id="stats-list"></div>
@@ -255,6 +249,13 @@
           params = new URLSearchParams(stateQuery);
         }
 
+        // ตรวจจับว่าเป็นการกดปุ่ม "แชร์การ์ดให้เพื่อน" หรือไม่
+        if (params.has('t') && params.has('hn')) {
+          document.getElementById("loader-text").innerText = "กำลังเปิดหน้าต่างแชร์การ์ด...";
+          const isShared = await handleDirectCardShare(params);
+          if (isShared) return;
+        }
+
         const typeParam = params.get('type');
         currentMatchId = params.get('id') || "700500";
 
@@ -271,6 +272,141 @@
       } catch (err) {
         document.getElementById("loader").innerHTML = `<p style="color:#e74c3c;">เกิดข้อผิดพลาด: ${err.message}</p>`;
       }
+    }
+
+    // ฟังก์ชันยิงหน้าต่าง Share Target Picker อัตโนมัติเมื่อกดจากปุ่มการ์ด
+    async function handleDirectCardShare(params) {
+      if (!liff.isLoggedIn()) {
+        liff.login();
+        return false;
+      }
+
+      if (!liff.isApiAvailable("shareTargetPicker")) {
+        alert("กรุณาเปิดลิงก์ผ่านแอป LINE เพื่อใช้งานการแชร์");
+        return false;
+      }
+
+      const title = params.get('t') || "MATCH UPDATE";
+      const headerColor = "#" + (params.get('c') || "38003c");
+      const homeName = params.get('hn') || "Home";
+      const homeLogo = params.get('hl') || "";
+      const awayName = params.get('an') || "Away";
+      const awayLogo = params.get('al') || "";
+      const scoreH = params.get('sh') || "";
+      const scoreA = params.get('sa') || "";
+      const detail = params.get('dt') || "";
+      const matchId = params.get('id') || currentMatchId;
+      const centerText = scoreA !== "" ? `${scoreH} - ${scoreA}` : scoreH;
+
+      const shareParams = params.toString();
+      const shareUri = `https://liff.line.me/${LIFF_ID}?${shareParams}`;
+      const pitchUri = `https://liff.line.me/${LIFF_ID}?id=${matchId}`;
+
+      const res = await liff.shareTargetPicker([
+        {
+          "type": "flex",
+          "altText": `${title}: ${homeName} vs ${awayName}`,
+          "contents": {
+            "type": "bubble",
+            "size": "kilo",
+            "header": {
+              "type": "box",
+              "layout": "vertical",
+              "backgroundColor": headerColor,
+              "contents": [
+                { "type": "text", "text": title, "color": "#ffffff", "weight": "bold", "size": "md", "align": "center" }
+              ]
+            },
+            "body": {
+              "type": "box",
+              "layout": "vertical",
+              "contents": [
+                {
+                  "type": "box",
+                  "layout": "horizontal",
+                  "alignItems": "center",
+                  "contents": [
+                    {
+                      "type": "box",
+                      "layout": "vertical",
+                      "alignItems": "center",
+                      "flex": 4,
+                      "contents": [
+                        { "type": "image", "url": homeLogo, "size": "40px", "aspectMode": "fit" },
+                        { "type": "text", "text": homeName, "size": "xs", "weight": "bold", "wrap": true, "align": "center", "margin": "sm" }
+                      ]
+                    },
+                    {
+                      "type": "box",
+                      "layout": "vertical",
+                      "alignItems": "center",
+                      "flex": 3,
+                      "contents": [
+                        { "type": "text", "text": centerText, "size": "lg", "weight": "bold", "align": "center" },
+                        { "type": "text", "text": "PL", "size": "xxs", "color": "#aaaaaa" }
+                      ]
+                    },
+                    {
+                      "type": "box",
+                      "layout": "vertical",
+                      "alignItems": "center",
+                      "flex": 4,
+                      "contents": [
+                        { "type": "image", "url": awayLogo, "size": "40px", "aspectMode": "fit" },
+                        { "type": "text", "text": awayName, "size": "xs", "weight": "bold", "wrap": true, "align": "center", "margin": "sm" }
+                      ]
+                    }
+                  ]
+                },
+                { "type": "separator", "margin": "md" },
+                {
+                  "type": "box",
+                  "layout": "vertical",
+                  "margin": "md",
+                  "contents": [
+                    { "type": "text", "text": detail, "size": "xs", "color": "#2c3e50", "weight": "bold", "wrap": true, "align": "center" }
+                  ]
+                }
+              ]
+            },
+            "footer": {
+              "type": "box",
+              "layout": "vertical",
+              "spacing": "sm",
+              "contents": [
+                {
+                  "type": "button",
+                  "style": "primary",
+                  "height": "sm",
+                  "color": "#1b5e20",
+                  "action": {
+                    "type": "uri",
+                    "label": "🏟️ ผัง 11 ตัวจริงบนสนาม 2D",
+                    "uri": pitchUri
+                  }
+                },
+                {
+                  "type": "button",
+                  "style": "secondary",
+                  "height": "sm",
+                  "color": "#f0f2f5",
+                  "action": {
+                    "type": "uri",
+                    "label": "แชร์การ์ดให้เพื่อน ↗️",
+                    "uri": shareUri
+                  }
+                }
+              ]
+            }
+          }
+        }
+      ]);
+
+      if (res) {
+        liff.closeWindow();
+        return true;
+      }
+      return false;
     }
 
     async function fetchWikipediaPhotos(playerNames) {
@@ -535,7 +671,6 @@
       });
     }
 
-    // ================= ACTION: SAVE PITCH AS IMAGE =================
     async function savePitchAsImage() {
       try {
         const target = document.getElementById("pitch-capture-zone");
@@ -551,8 +686,12 @@
       }
     }
 
-    // ================= ACTION: SHARE TARGET PICKER (LINE 0-QUOTA) =================
     async function shareMatchCard() {
+      if (!liff.isLoggedIn()) {
+        liff.login();
+        return;
+      }
+
       if (!liff.isApiAvailable("shareTargetPicker")) {
         alert("กรุณาเปิดลิงก์ผ่านแอป LINE เพื่อใช้งานการแชร์");
         return;
@@ -599,7 +738,6 @@
       ]);
     }
 
-    // ================= LOAD STANDINGS (TAB 2) =================
     async function loadStandings() {
       try {
         const tbody = document.getElementById("standings-tbody");
@@ -648,7 +786,6 @@
       }
     }
 
-    // ================= LOAD FIXTURES & LIVE SCORES (TAB 3) =================
     async function loadFixtures() {
       try {
         const listDiv = document.getElementById("fixtures-list");
