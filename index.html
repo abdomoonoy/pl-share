@@ -3,107 +3,67 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <meta name="referrer" content="no-referrer">
   <title>Premier League Hub</title>
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0b0e14; color: #fff; min-height: 100vh; padding: 12px; }
-    
-    /* Top Main Navigation Tabs */
     .main-nav { display: flex; gap: 6px; background: #161b26; padding: 6px; border-radius: 12px; margin-bottom: 14px; border: 1px solid rgba(255,255,255,0.08); }
-    .nav-tab-btn { flex: 1; padding: 8px 4px; background: transparent; border: none; border-radius: 8px; color: #a0aec0; font-size: 12px; font-weight: bold; cursor: pointer; text-align: center; transition: all 0.2s ease; }
+    .nav-tab-btn { flex: 1; padding: 8px 4px; background: transparent; border: none; border-radius: 8px; color: #a0aec0; font-size: 12px; font-weight: bold; cursor: pointer; text-align: center; }
     .nav-tab-btn.active { background: #38003c; color: #00ff85; box-shadow: 0 2px 6px rgba(0,0,0,0.4); }
-
-    .tab-view { display: none; }
-    .tab-view.active { display: block; }
-
-    /* Header Scoreboard */
+    .tab-view { display: none; } .tab-view.active { display: block; }
     .match-header { background: #161b26; border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.08); }
     .status-badge { text-align: center; font-size: 11px; font-weight: bold; color: #00ff85; text-transform: uppercase; margin-bottom: 8px; }
     .score-row { display: flex; align-items: center; justify-content: space-between; }
-    .team-col { flex: 1; text-align: center; }
-    .team-col img { width: 42px; height: 42px; object-fit: contain; }
+    .team-col { flex: 1; text-align: center; } .team-col img { width: 42px; height: 42px; object-fit: contain; }
     .team-col .name { font-size: 12px; font-weight: bold; margin-top: 4px; }
     .score-box { font-size: 24px; font-weight: 900; color: #fff; flex: 0.8; text-align: center; letter-spacing: 2px; }
-
-    /* Timeline Section */
     .section-card { background: #161b26; border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.05); }
     .section-title { font-size: 13px; color: #00ff85; margin-bottom: 14px; text-align: center; font-weight: bold; }
-    
     .timeline-container { position: relative; width: 100%; display: flex; flex-direction: column; gap: 10px; }
     .timeline-line { position: absolute; top: 0; bottom: 0; left: 50%; width: 2px; background: rgba(255,255,255,0.1); transform: translateX(-50%); z-index: 1; }
-    
     .timeline-item { position: relative; z-index: 2; display: flex; align-items: center; width: 100%; }
     .t-left { flex: 1; display: flex; justify-content: flex-end; align-items: center; gap: 6px; padding-right: 12px; font-size: 12px; font-weight: bold; text-align: right; }
     .t-center { min-width: 32px; height: 22px; background: #232a3b; border: 1px solid rgba(255,255,255,0.2); border-radius: 11px; font-size: 10px; font-weight: bold; color: #00ff85; display: flex; align-items: center; justify-content: center; z-index: 3; }
     .t-right { flex: 1; display: flex; justify-content: flex-start; align-items: center; gap: 6px; padding-left: 12px; font-size: 12px; font-weight: bold; text-align: left; }
     .t-icon { font-size: 14px; }
-
-    /* 2D Football Pitch */
     .pitch-capture-area { background: #161b26; border-radius: 14px; padding: 12px; }
     .pitch-container { position: relative; width: 100%; aspect-ratio: 2 / 3; max-width: 400px; margin: 0 auto; background: repeating-linear-gradient(0deg, #165b27, #165b27 10%, #19692d 10%, #19692d 20%); border: 2px solid rgba(255,255,255,0.8); border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.6); display: flex; flex-direction: column; justify-content: space-between; padding: 14px 6px; }
     .pitch-center-line { position: absolute; top: 50%; left: 0; right: 0; height: 2px; background: rgba(255,255,255,0.6); }
     .pitch-center-circle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70px; height: 70px; border: 2px solid rgba(255,255,255,0.6); border-radius: 50%; }
     .pitch-box-top { position: absolute; top: 0; left: 20%; right: 20%; height: 16%; border: 2px solid rgba(255,255,255,0.6); border-top: none; }
     .pitch-box-bottom { position: absolute; bottom: 0; left: 20%; right: 20%; height: 16%; border: 2px solid rgba(255,255,255,0.6); border-bottom: none; }
-
     .formation-row { position: relative; z-index: 2; display: flex; justify-content: space-around; align-items: center; width: 100%; }
-    
-    /* Player Node UI */
     .player-node { display: flex; flex-direction: column; align-items: center; width: 70px; }
     .player-avatar-wrap { position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
-    
-    .player-photo { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: #232a3b; border: 2px solid #ffffff; box-shadow: 0 3px 8px rgba(0,0,0,0.6); display: none; }
-    .player-badge { position: absolute; bottom: -2px; right: -2px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 8px; font-size: 9px; font-weight: 900; display: none; align-items: center; justify-content: center; border: 1.5px solid #fff; box-shadow: 0 1px 4px rgba(0,0,0,0.6); z-index: 4; }
-
-    .player-disc { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 900; color: #fff; border: 2px solid #ffffff; box-shadow: 0 3px 8px rgba(0,0,0,0.6); }
+    .player-photo { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: #232a3b; border: 2px solid #ffffff; display: none; }
+    .player-badge { position: absolute; bottom: -2px; right: -2px; min-width: 16px; height: 16px; padding: 0 3px; border-radius: 8px; font-size: 9px; font-weight: 900; display: none; align-items: center; justify-content: center; border: 1.5px solid #fff; z-index: 4; }
+    .player-disc { width: 42px; height: 42px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 15px; font-weight: 900; color: #fff; border: 2px solid #ffffff; }
     .player-disc.home { background: linear-gradient(135deg, #e74c3c, #c0392b); }
     .player-disc.away { background: linear-gradient(135deg, #3498db, #2980b9); }
     .player-disc.gk { background: linear-gradient(135deg, #f1c40f, #d4ac0d); color: #000; }
-
     .player-name { font-size: 10px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.85); padding: 2px 6px; border-radius: 4px; margin-top: 3px; max-width: 68px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
-
     .team-switch-bar { display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; }
     .team-chip { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; background: #161b26; border: 1px solid rgba(255,255,255,0.1); color: #fff; cursor: pointer; }
     .team-chip.active { background: #00ff85; color: #000; border-color: #00ff85; }
-
-    /* Action Buttons Bar */
     .pitch-action-bar { display: flex; justify-content: center; gap: 8px; margin-top: 14px; }
-    .action-btn { flex: 1; max-width: 190px; padding: 10px; border-radius: 10px; font-size: 12px; font-weight: bold; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; transition: opacity 0.2s; }
-    .action-btn:active { opacity: 0.8; }
+    .action-btn { flex: 1; max-width: 190px; padding: 10px; border-radius: 10px; font-size: 12px; font-weight: bold; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
     .btn-save { background: #232a3b; color: #00ff85; border: 1px solid rgba(0,255,133,0.3); }
     .btn-share { background: #00ff85; color: #000; }
-
-    /* Stats Box */
-    .stat-row { margin-bottom: 12px; }
-    .stat-labels { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; margin-bottom: 4px; }
+    .stat-row { margin-bottom: 12px; } .stat-labels { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; margin-bottom: 4px; }
     .stat-bar-wrap { display: flex; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
-    .stat-bar-h { background: #00ff85; height: 100%; }
-    .stat-bar-a { background: #3498db; height: 100%; }
-
-    /* Standings Table Styling */
-    .table-responsive { overflow-x: auto; width: 100%; }
-    .standings-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .stat-bar-h { background: #00ff85; height: 100%; } .stat-bar-a { background: #3498db; height: 100%; }
+    .table-responsive { overflow-x: auto; width: 100%; } .standings-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
     .standings-tbl th { color: #a0aec0; padding: 8px 4px; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.1); }
     .standings-tbl td { padding: 8px 4px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; }
     .standings-tbl td.team-name-cell { text-align: left; display: flex; align-items: center; gap: 6px; font-weight: bold; }
     .standings-tbl img { width: 18px; height: 18px; object-fit: contain; }
-    .rank-top4 { border-left: 3px solid #3498db; }
-    .rank-rel { border-left: 3px solid #e74c3c; }
-
-    /* Fixtures List Styling */
+    .rank-top4 { border-left: 3px solid #3498db; } .rank-rel { border-left: 3px solid #e74c3c; }
     .fixture-card { background: #161b26; border-radius: 12px; padding: 12px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(255,255,255,0.06); cursor: pointer; }
-    .fixture-card:hover { border-color: #00ff85; }
-    .f-team { display: flex; align-items: center; gap: 8px; flex: 1; font-size: 12px; font-weight: bold; }
-    .f-team.away { justify-content: flex-end; }
+    .f-team { display: flex; align-items: center; gap: 8px; flex: 1; font-size: 12px; font-weight: bold; } .f-team.away { justify-content: flex-end; }
     .f-team img { width: 24px; height: 24px; object-fit: contain; }
-    .f-center { min-width: 60px; text-align: center; }
-    .f-score { font-size: 14px; font-weight: 900; color: #00ff85; }
-    .f-status { font-size: 10px; color: #a0aec0; margin-top: 2px; }
-
-    /* Loading Spinner */
+    .f-center { min-width: 60px; text-align: center; } .f-score { font-size: 14px; font-weight: 900; color: #00ff85; } .f-status { font-size: 10px; color: #a0aec0; margin-top: 2px; }
     .center-spinner { text-align: center; padding: 40px 0; }
     .spin { border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid #00ff85; border-radius: 50%; width: 36px; height: 36px; animation: sp 0.8s linear infinite; margin: 0 auto 12px; }
     @keyframes sp { 100% { transform: rotate(360deg); } }
@@ -111,473 +71,236 @@
 </head>
 <body>
 
-  <!-- Top Main Navigation -->
   <div class="main-nav">
     <button class="nav-tab-btn active" id="tab-btn-match" onclick="switchTab('match')">🏟️ แมตช์เซ็นเตอร์</button>
     <button class="nav-tab-btn" id="tab-btn-standings" onclick="switchTab('standings')">🏆 ตารางคะแนน</button>
     <button class="nav-tab-btn" id="tab-btn-fixtures" onclick="switchTab('fixtures')">📅 ผลสด / โปรแกรม</button>
   </div>
 
-  <!-- Loading State -->
   <div id="loader" class="center-spinner">
     <div class="spin"></div>
     <p id="loader-text" style="font-size: 13px; color: #a0aec0;">กำลังโหลดข้อมูล...</p>
   </div>
 
-  <!-- ================= TAB 1: MATCH CENTER ================= -->
   <div id="view-match" class="tab-view active" style="display: none;">
     <div class="match-header">
       <div class="status-badge" id="m-status">PREMIER LEAGUE</div>
       <div class="score-row">
-        <div class="team-col">
-          <img id="m-home-logo" src="" referrerpolicy="no-referrer">
-          <div class="name" id="m-home-name">Home</div>
-        </div>
+        <div class="team-col"><img id="m-home-logo" src=""><div class="name" id="m-home-name">Home</div></div>
         <div class="score-box" id="m-score-val">VS</div>
-        <div class="team-col">
-          <img id="m-away-logo" src="" referrerpolicy="no-referrer">
-          <div class="name" id="m-away-name">Away</div>
-        </div>
+        <div class="team-col"><img id="m-away-logo" src=""><div class="name" id="m-away-name">Away</div></div>
       </div>
     </div>
-
     <div class="section-card" id="timeline-section">
-      <div class="section-title">⏱️ เหตุการณ์สำคัญในเกม (Timeline)</div>
-      <div class="timeline-container" id="timeline-list">
-        <div class="timeline-line"></div>
-      </div>
+      <div class="section-title">⏱️ เหตุการณ์สำคัญในเกม</div>
+      <div class="timeline-container" id="timeline-list"><div class="timeline-line"></div></div>
     </div>
-
     <div class="section-card">
       <div class="section-title">🏟️ ผัง 11 ตัวจริงบนสนาม 2D</div>
       <div class="team-switch-bar">
         <div class="team-chip active" id="btn-team-h" onclick="renderTeamPitch('home')">🏠 ทีมเหย้า</div>
         <div class="team-chip" id="btn-team-a" onclick="renderTeamPitch('away')">✈️ ทีมเยือน</div>
       </div>
-      
       <div class="pitch-capture-area" id="pitch-capture-zone">
         <div class="pitch-container" id="pitch-board">
-          <div class="pitch-box-top"></div>
-          <div class="pitch-center-circle"></div>
-          <div class="pitch-center-line"></div>
-          <div class="pitch-box-bottom"></div>
+          <div class="pitch-box-top"></div><div class="pitch-center-circle"></div><div class="pitch-center-line"></div><div class="pitch-box-bottom"></div>
         </div>
       </div>
-
       <div class="pitch-action-bar">
         <button class="action-btn btn-save" onclick="savePitchAsImage()">📥 บันทึกเป็นรูปภาพ</button>
         <button class="action-btn btn-share" onclick="shareCurrentMatch()">📤 แชร์ผังนี้ให้เพื่อน</button>
       </div>
     </div>
-
-    <div class="section-card" id="stats-section">
-      <div class="section-title">📊 สถิติเกมสด (Match Stats)</div>
-      <div id="stats-list"></div>
-    </div>
+    <div class="section-card" id="stats-section"><div class="section-title">📊 สถิติเกมสด</div><div id="stats-list"></div></div>
   </div>
 
-  <!-- ================= TAB 2: STANDINGS ================= -->
   <div id="view-standings" class="tab-view">
     <div class="section-card">
-      <div class="section-title">🏆 ตารางคะแนนพรีเมียร์ลีก (Standings)</div>
+      <div class="section-title">🏆 ตารางคะแนนพรีเมียร์ลีก</div>
       <div class="table-responsive">
         <table class="standings-tbl">
-          <thead>
-            <tr>
-              <th style="width: 25px;">#</th>
-              <th>สโมสร</th>
-              <th>แข่ง</th>
-              <th>+/-</th>
-              <th style="color:#00ff85;">แต้ม</th>
-            </tr>
-          </thead>
+          <thead><tr><th style="width:25px;">#</th><th>สโมสร</th><th>แข่ง</th><th>+/-</th><th style="color:#00ff85;">แต้ม</th></tr></thead>
           <tbody id="standings-tbody"></tbody>
         </table>
       </div>
     </div>
   </div>
 
-  <!-- ================= TAB 3: FIXTURES ================= -->
   <div id="view-fixtures" class="tab-view">
     <div class="section-card">
-      <div class="section-title">📅 แมตช์วันนี้ & ผลบอลสด (แตะเพื่อดูผัง 2D)</div>
+      <div class="section-title">📅 แมตช์วันนี้ & ผลบอลสด</div>
       <div id="fixtures-list"></div>
     </div>
   </div>
 
   <script>
     const LIFF_ID = "2011335665-i2smhkIR";
-    let matchData = null;
-    let homeTeamId = null, awayTeamId = null;
-    let currentMatchId = "700500";
-    let currentSide = "home";
-    const playerPhotoCache = {};
-    let standingsLoaded = false;
-    let fixturesLoaded = false;
+    let matchData = null; let homeTeamId = null, awayTeamId = null; let currentMatchId = "700500"; let currentSide = "home";
+    const playerPhotoCache = {}; let standingsLoaded = false; let fixturesLoaded = false;
 
     function switchTab(tab) {
       document.querySelectorAll(".nav-tab-btn").forEach(b => b.classList.remove("active"));
       document.querySelectorAll(".tab-view").forEach(v => v.style.display = "none");
-
-      if (tab === 'match') {
-        document.getElementById("tab-btn-match").classList.add("active");
-        document.getElementById("view-match").style.display = "block";
-      } else if (tab === 'standings') {
-        document.getElementById("tab-btn-standings").classList.add("active");
-        document.getElementById("view-standings").style.display = "block";
-        if (!standingsLoaded) loadStandings();
-      } else if (tab === 'fixtures') {
-        document.getElementById("tab-btn-fixtures").classList.add("active");
-        document.getElementById("view-fixtures").style.display = "block";
-        if (!fixturesLoaded) loadFixtures();
-      }
+      document.getElementById(`tab-btn-${tab}`).classList.add("active");
+      document.getElementById(`view-${tab}`).style.display = "block";
+      if (tab === 'standings' && !standingsLoaded) loadStandings();
+      if (tab === 'fixtures' && !fixturesLoaded) loadFixtures();
     }
 
     async function initApp() {
       try {
         await liff.init({ liffId: LIFF_ID });
 
-        let searchStr = window.location.search;
-        if (!searchStr && window.location.hash.includes('?')) {
-          searchStr = '?' + window.location.hash.split('?')[1];
+        // ระบบจับ URL แบบแข็งแกร่ง 100%
+        let urlParams = new URLSearchParams(window.location.search);
+        let params = urlParams;
+        if (urlParams.has('liff.state')) {
+          let stateRaw = urlParams.get('liff.state');
+          let cleanState = stateRaw.startsWith('?') ? stateRaw : '?' + stateRaw;
+          params = new URLSearchParams(cleanState);
         }
 
-        let params = new URLSearchParams(searchStr);
-        if (params.has('liff.state')) {
-          const stateStr = decodeURIComponent(params.get('liff.state'));
-          const stateQuery = stateStr.includes('?') ? stateStr.substring(stateStr.indexOf('?')) : ('?' + stateStr);
-          params = new URLSearchParams(stateQuery);
-        }
-
-        // หากเป็นการกดมาจากปุ่ม "แชร์การ์ดให้เพื่อน" บน LINE
+        // ตรวจจับการกดปุ่มแชร์การ์ด
         if (params.has('t') && params.has('hn')) {
-          document.getElementById("loader-text").innerText = "กำลังเปิดหน้าต่างแชร์...";
+          document.getElementById("loader-text").innerText = "กำลังเปิดหน้าต่างส่งให้เพื่อน...";
           await executeDirectShare(params);
-          return;
+          return; // หยุดการโหลดหน้าผังทันที
         }
 
-        const typeParam = params.get('type');
         currentMatchId = params.get('id') || "700500";
-
-        if (typeParam === 'standings') {
-          switchTab('standings');
-          loadMatchDetails(currentMatchId);
-        } else if (typeParam === 'fixtures') {
-          switchTab('fixtures');
-          loadMatchDetails(currentMatchId);
-        } else {
-          switchTab('match');
-          await loadMatchDetails(currentMatchId);
-        }
+        const typeParam = params.get('type');
+        
+        if (typeParam === 'standings') { switchTab('standings'); loadMatchDetails(currentMatchId); }
+        else if (typeParam === 'fixtures') { switchTab('fixtures'); loadMatchDetails(currentMatchId); }
+        else { switchTab('match'); await loadMatchDetails(currentMatchId); }
       } catch (err) {
-        document.getElementById("loader").innerHTML = `<p style="color:#e74c3c;">เกิดข้อผิดพลาด: ${err.message}</p>`;
+        document.getElementById("loader").innerHTML = `<p style="color:#e74c3c;">Error: ${err.message}</p>`;
       }
     }
 
-    // ฟังก์ชันช่วยส่ง Flex Message ผ่าน Share Target Picker
     async function executeDirectShare(params) {
       if (!liff.isApiAvailable("shareTargetPicker")) {
-        alert("ยังไม่ได้เปิดใช้งาน Share Target Picker ใน LINE Developers หรืออุปกรณ์นี้ไม่รองรับ");
-        return;
+        alert("กรุณาเปิดลิงก์ในแอป LINE เพื่อใช้งานฟังก์ชันแชร์");
+        liff.closeWindow(); return;
       }
-
       const title = params.get('t') || "MATCH UPDATE";
       const headerColor = "#" + (params.get('c') || "38003c");
       const homeName = params.get('hn') || "Home";
       const homeLogo = params.get('hl') || "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png";
       const awayName = params.get('an') || "Away";
       const awayLogo = params.get('al') || "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png";
-      const scoreH = params.get('sh') || "0";
-      const scoreA = params.get('sa') || "0";
-      const detail = params.get('dt') || "ติดตามผลบอลสดและผัง 11 ตัวจริง 2D ได้ที่นี่";
-      const matchId = params.get('id') || currentMatchId;
+      const scoreH = params.get('sh') || "0"; const scoreA = params.get('sa') || "0";
+      const detail = params.get('dt') || "";
+      const mId = params.get('id') || currentMatchId;
       const centerText = scoreA !== "" ? `${scoreH} - ${scoreA}` : scoreH;
 
-      const shareParams = params.toString();
-      const shareUri = `https://liff.line.me/${LIFF_ID}?${shareParams}`;
-      const pitchUri = `https://liff.line.me/${LIFF_ID}?id=${matchId}`;
-
-      try {
-        const res = await liff.shareTargetPicker([
-          {
-            "type": "flex",
-            "altText": `${title}: ${homeName} vs ${awayName}`,
-            "contents": {
-              "type": "bubble",
-              "size": "kilo",
-              "header": {
-                "type": "box",
-                "layout": "vertical",
-                "backgroundColor": headerColor,
-                "contents": [
-                  { "type": "text", "text": title, "color": "#ffffff", "weight": "bold", "size": "md", "align": "center" }
-                ]
-              },
-              "body": {
-                "type": "box",
-                "layout": "vertical",
-                "contents": [
-                  {
-                    "type": "box",
-                    "layout": "horizontal",
-                    "alignItems": "center",
-                    "contents": [
-                      {
-                        "type": "box",
-                        "layout": "vertical",
-                        "alignItems": "center",
-                        "flex": 4,
-                        "contents": [
-                          { "type": "image", "url": homeLogo, "size": "xs", "aspectMode": "fit" },
-                          { "type": "text", "text": homeName, "size": "xs", "weight": "bold", "wrap": true, "align": "center", "margin": "sm" }
-                        ]
-                      },
-                      {
-                        "type": "box",
-                        "layout": "vertical",
-                        "alignItems": "center",
-                        "flex": 3,
-                        "contents": [
-                          { "type": "text", "text": centerText, "size": "lg", "weight": "bold", "align": "center" },
-                          { "type": "text", "text": "PL", "size": "xxs", "color": "#aaaaaa" }
-                        ]
-                      },
-                      {
-                        "type": "box",
-                        "layout": "vertical",
-                        "alignItems": "center",
-                        "flex": 4,
-                        "contents": [
-                          { "type": "image", "url": awayLogo, "size": "xs", "aspectMode": "fit" },
-                          { "type": "text", "text": awayName, "size": "xs", "weight": "bold", "wrap": true, "align": "center", "margin": "sm" }
-                        ]
-                      }
-                    ]
-                  },
-                  { "type": "separator", "margin": "md" },
-                  {
-                    "type": "box",
-                    "layout": "vertical",
-                    "margin": "md",
-                    "contents": [
-                      { "type": "text", "text": detail, "size": "xs", "color": "#2c3e50", "weight": "bold", "wrap": true, "align": "center" }
-                    ]
-                  }
-                ]
-              },
-              "footer": {
-                "type": "box",
-                "layout": "vertical",
-                "spacing": "sm",
-                "contents": [
-                  {
-                    "type": "button",
-                    "style": "primary",
-                    "height": "sm",
-                    "color": "#1b5e20",
-                    "action": {
-                      "type": "uri",
-                      "label": "🏟️ ผัง 11 ตัวจริงบนสนาม 2D",
-                      "uri": pitchUri
-                    }
-                  },
-                  {
-                    "type": "button",
-                    "style": "secondary",
-                    "height": "sm",
-                    "color": "#f0f2f5",
-                    "action": {
-                      "type": "uri",
-                      "label": "แชร์การ์ดให้เพื่อน ↗️",
-                      "uri": shareUri
-                    }
-                  }
-                ]
-              }
-            }
+      const flexMsg = {
+        "type": "flex", "altText": `${title}: ${homeName} vs ${awayName}`,
+        "contents": {
+          "type": "bubble", "size": "kilo",
+          "header": { "type": "box", "layout": "vertical", "backgroundColor": headerColor, "contents": [ { "type": "text", "text": title, "color": "#ffffff", "weight": "bold", "size": "md", "align": "center" } ] },
+          "body": {
+            "type": "box", "layout": "vertical", "contents": [
+              { "type": "box", "layout": "horizontal", "alignItems": "center", "contents": [
+                { "type": "box", "layout": "vertical", "alignItems": "center", "flex": 4, "contents": [ { "type": "image", "url": homeLogo, "size": "xs", "aspectMode": "fit" }, { "type": "text", "text": homeName, "size": "xs", "weight": "bold", "wrap": true, "align": "center", "margin": "sm" } ] },
+                { "type": "box", "layout": "vertical", "alignItems": "center", "flex": 3, "contents": [ { "type": "text", "text": centerText, "size": "lg", "weight": "bold", "align": "center" }, { "type": "text", "text": "PL", "size": "xxs", "color": "#aaaaaa" } ] },
+                { "type": "box", "layout": "vertical", "alignItems": "center", "flex": 4, "contents": [ { "type": "image", "url": awayLogo, "size": "xs", "aspectMode": "fit" }, { "type": "text", "text": awayName, "size": "xs", "weight": "bold", "wrap": true, "align": "center", "margin": "sm" } ] }
+              ]},
+              { "type": "separator", "margin": "md" },
+              { "type": "box", "layout": "vertical", "margin": "md", "contents": [ { "type": "text", "text": detail, "size": "xs", "color": "#2c3e50", "weight": "bold", "wrap": true, "align": "center" } ] }
+            ]
+          },
+          "footer": {
+            "type": "box", "layout": "vertical", "spacing": "sm", "contents": [
+              { "type": "button", "style": "primary", "height": "sm", "color": "#1b5e20", "action": { "type": "uri", "label": "🏟️ ผัง 11 ตัวจริงบนสนาม 2D", "uri": `https://liff.line.me/${LIFF_ID}?id=${mId}` } },
+              { "type": "button", "style": "secondary", "height": "sm", "color": "#f0f2f5", "action": { "type": "uri", "label": "แชร์การ์ดให้เพื่อน ↗️", "uri": `https://liff.line.me/${LIFF_ID}?${params.toString()}` } }
+            ]
           }
-        ]);
-
-        if (res) {
-          liff.closeWindow();
         }
-      } catch (err) {
-        alert("เกิดข้อผิดพลาดในการแชร์: " + err.message);
-      }
+      };
+
+      try {
+        const res = await liff.shareTargetPicker([flexMsg]);
+        if(res) liff.closeWindow(); else liff.closeWindow();
+      } catch(e) { liff.closeWindow(); }
     }
 
-    // ฟังก์ชันแชร์สำหรับปุ่มบนหน้าเว็บ
     async function shareCurrentMatch() {
-      if (!liff.isApiAvailable("shareTargetPicker")) {
-        alert("กรุณาเปิดลิงก์ผ่านแอป LINE เพื่อใช้งานการแชร์");
-        return;
-      }
-      
+      if (!liff.isApiAvailable("shareTargetPicker")) return alert("กรุณาใช้งานผ่านแอป LINE");
       const comp = matchData.header.competitions[0];
-      const home = comp.competitors.find(c => c.homeAway === "home");
-      const away = comp.competitors.find(c => c.homeAway === "away");
-      const hName = home.team.shortDisplayName || home.team.name;
-      const aName = away.team.shortDisplayName || away.team.name;
-      const score = (home.score !== undefined && away.score !== undefined) ? `${home.score} - ${away.score}` : "VS";
-
-      try {
-        await liff.shareTargetPicker([
-          {
-            "type": "flex",
-            "altText": `⚽ ผัง 11 ตัวจริง: ${hName} vs ${aName}`,
-            "contents": {
-              "type": "bubble",
-              "size": "kilo",
-              "body": {
-                "type": "box",
-                "layout": "vertical",
-                "backgroundColor": "#161b26",
-                "paddingAll": "16px",
-                "contents": [
-                  { "type": "text", "text": "PREMIER LEAGUE MATCH CENTER", "size": "xxs", "color": "#00ff85", "weight": "bold" },
-                  { "type": "text", "text": `${hName} ${score} ${aName}`, "size": "md", "color": "#ffffff", "weight": "bold", "margin": "md" },
-                  { "type": "separator", "color": "#ffffff22", "margin": "lg" },
-                  {
-                    "type": "button",
-                    "style": "primary",
-                    "color": "#38003c",
-                    "margin": "lg",
-                    "action": {
-                      "type": "uri",
-                      "label": "🏟️ ดูผัง 11 ตัวจริง 2D สด",
-                      "uri": `https://liff.line.me/${LIFF_ID}?id=${currentMatchId}`
-                    }
-                  }
-                ]
-              }
-            }
+      const hTeam = comp.competitors.find(c => c.homeAway === "home");
+      const aTeam = comp.competitors.find(c => c.homeAway === "away");
+      const score = `${hTeam.score || 0} - ${aTeam.score || 0}`;
+      
+      const flexMsg = {
+        "type": "flex", "altText": `⚽ ผัง 11 ตัวจริง: ${hTeam.team.name} vs ${aTeam.team.name}`,
+        "contents": {
+          "type": "bubble", "size": "kilo",
+          "body": {
+            "type": "box", "layout": "vertical", "backgroundColor": "#161b26", "paddingAll": "16px",
+            "contents": [
+              { "type": "text", "text": "PREMIER LEAGUE MATCH CENTER", "size": "xxs", "color": "#00ff85", "weight": "bold" },
+              { "type": "text", "text": `${hTeam.team.name} ${score} ${aTeam.team.name}`, "size": "md", "color": "#ffffff", "weight": "bold", "margin": "md" },
+              { "type": "button", "style": "primary", "color": "#38003c", "margin": "lg", "action": { "type": "uri", "label": "🏟️ ดูผัง 11 ตัวจริง 2D สด", "uri": `https://liff.line.me/${LIFF_ID}?id=${currentMatchId}` } }
+            ]
           }
-        ]);
-      } catch (err) {
-        alert("ไม่สามารถแชร์ได้: " + err.message);
-      }
+        }
+      };
+      await liff.shareTargetPicker([flexMsg]);
     }
 
-    async function fetchWikipediaPhotos(playerNames) {
-      const needed = playerNames.filter(name => name && !playerPhotoCache[name]);
-      if (needed.length === 0) return;
-
+    async function fetchWikipediaPhotos(names) {
+      const needed = names.filter(n => n && !playerPhotoCache[n]);
+      if (!needed.length) return;
       try {
-        const titlesParam = needed.map(n => encodeURIComponent(n)).join("|");
-        const url = `https://en.wikipedia.org/w/api.php?action=query&titles=${titlesParam}&prop=pageimages&pithumbsize=150&redirects=1&format=json&origin=*`;
-        const res = await fetch(url);
+        const titles = needed.map(n => encodeURIComponent(n)).join("|");
+        const res = await fetch(`https://en.wikipedia.org/w/api.php?action=query&titles=${titles}&prop=pageimages&pithumbsize=150&redirects=1&format=json&origin=*`);
         const data = await res.json();
-
-        if (data && data.query) {
-          const pages = data.query.pages || {};
-          const redirects = data.query.redirects || [];
-          const normalized = data.query.normalized || [];
-
-          const nameMap = {};
-          needed.forEach(orig => { nameMap[orig.toLowerCase()] = orig; });
-          normalized.forEach(n => { nameMap[n.to.toLowerCase()] = n.from; });
-          redirects.forEach(r => { nameMap[r.to.toLowerCase()] = nameMap[r.from.toLowerCase()] || r.from; });
-
-          Object.values(pages).forEach(page => {
-            if (page.thumbnail && page.thumbnail.source) {
-              const pTitleLower = page.title.toLowerCase();
-              const origName = nameMap[pTitleLower] || page.title;
-              playerPhotoCache[origName] = page.thumbnail.source;
-              playerPhotoCache[page.title] = page.thumbnail.source;
-            }
+        if (data.query && data.query.pages) {
+          Object.values(data.query.pages).forEach(p => {
+            if(p.thumbnail) playerPhotoCache[p.title] = p.thumbnail.source;
           });
         }
-      } catch (err) {}
+      } catch(e) {}
     }
 
-    async function loadMatchDetails(matchId) {
+    async function loadMatchDetails(mId) {
+      document.getElementById("loader").style.display = "block";
       try {
-        document.getElementById("loader").style.display = "block";
-        const res = await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/eng.1/summary?event=${matchId}`);
+        const res = await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/eng.1/summary?event=${mId}`);
         matchData = await res.json();
-
         const comp = matchData.header.competitions[0];
-        const home = comp.competitors.find(c => c.homeAway === "home");
-        const away = comp.competitors.find(c => c.homeAway === "away");
-
-        homeTeamId = home.id;
-        awayTeamId = away.id;
-
-        document.getElementById("m-status").innerText = matchData.header.league.name + " • " + (matchData.header.status ? matchData.header.status.type.detail : "");
-        document.getElementById("m-home-name").innerText = home.team.shortDisplayName || home.team.name;
-        document.getElementById("m-home-logo").src = home.team.logos ? home.team.logos[0].href : "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png";
-        document.getElementById("m-away-name").innerText = away.team.shortDisplayName || away.team.name;
-        document.getElementById("m-away-logo").src = away.team.logos ? away.team.logos[0].href : "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png";
-
-        document.getElementById("btn-team-h").innerText = `🏠 ${home.team.shortDisplayName || home.team.name}`;
-        document.getElementById("btn-team-a").innerText = `✈️ ${away.team.shortDisplayName || away.team.name}`;
-
-        const scoreH = home.score !== undefined ? home.score : "";
-        const scoreA = away.score !== undefined ? away.score : "";
-        document.getElementById("m-score-val").innerText = scoreA !== "" ? `${scoreH} - ${scoreA}` : "VS";
-
-        renderTimeline();
-        await renderTeamPitch("home");
-        renderStats();
-
+        const h = comp.competitors.find(c => c.homeAway === "home"), a = comp.competitors.find(c => c.homeAway === "away");
+        homeTeamId = h.id; awayTeamId = a.id;
+        
+        document.getElementById("m-status").innerText = matchData.header.league.name + " • " + (matchData.header.status.type.detail || "");
+        document.getElementById("m-home-name").innerText = h.team.shortDisplayName; document.getElementById("m-home-logo").src = h.team.logos[0].href;
+        document.getElementById("m-away-name").innerText = a.team.shortDisplayName; document.getElementById("m-away-logo").src = a.team.logos[0].href;
+        document.getElementById("btn-team-h").innerText = `🏠 ${h.team.shortDisplayName}`; document.getElementById("btn-team-a").innerText = `✈️ ${a.team.shortDisplayName}`;
+        document.getElementById("m-score-val").innerText = h.score !== undefined ? `${h.score} - ${a.score}` : "VS";
+        
+        renderTimeline(); await renderTeamPitch("home"); renderStats();
         document.getElementById("loader").style.display = "none";
-      } catch (e) {
-        document.getElementById("loader").innerHTML = `<p style="color:#e74c3c;">ไม่พบข้อมูลผังผู้เล่นสำหรับคู่นี้</p>`;
-      }
+      } catch(e) { document.getElementById("loader").innerHTML = `<p style="color:#e74c3c;">Error</p>`; }
     }
 
     function renderTimeline() {
-      const container = document.getElementById("timeline-list");
-      const keyEvents = matchData.keyEvents || [];
-
-      if (keyEvents.length === 0) {
-        document.getElementById("timeline-section").style.display = "none";
-        return;
-      }
+      const c = document.getElementById("timeline-list");
+      const evts = matchData.keyEvents || [];
+      if(!evts.length) { document.getElementById("timeline-section").style.display = "none"; return; }
       document.getElementById("timeline-section").style.display = "block";
-
-      const oldItems = container.querySelectorAll(".timeline-item");
-      oldItems.forEach(i => i.remove());
-
-      keyEvents.forEach(k => {
-        const clock = k.clock ? k.clock.displayValue : "";
-        const typeText = (k.type && k.type.text) ? k.type.text.toLowerCase() : "";
-        const eventTeamId = k.team ? k.team.id : null;
-        const isHome = eventTeamId === homeTeamId;
-
-        const playerName = (k.participants && k.participants[0] && k.participants[0].athlete)
-                           ? (k.participants[0].athlete.shortName || k.participants[0].athlete.displayName)
-                           : (k.text || "ผู้เล่น");
-
-        let icon = "⚡";
-        let extra = "";
-        if (typeText.includes("goal") || typeText.includes("penalty")) {
-          icon = "⚽";
-          if (typeText.includes("penalty")) extra = " (P)";
-          if (typeText.includes("own")) extra = " (OG)";
-        } else if (typeText.includes("red card")) {
-          icon = "🟥";
-        } else if (typeText.includes("yellow card")) {
-          icon = typeText.includes("second") ? "🟨🟥" : "🟨";
-        }
-
-        const row = document.createElement("div");
-        row.className = "timeline-item";
-
-        if (isHome) {
-          row.innerHTML = `
-            <div class="t-left"><span>${playerName}${extra}</span><span class="t-icon">${icon}</span></div>
-            <div class="t-center">${clock}</div>
-            <div class="t-right"></div>
-          `;
-        } else {
-          row.innerHTML = `
-            <div class="t-left"></div>
-            <div class="t-center">${clock}</div>
-            <div class="t-right"><span class="t-icon">${icon}</span><span>${playerName}${extra}</span></div>
-          `;
-        }
-        container.appendChild(row);
+      c.querySelectorAll(".timeline-item").forEach(i => i.remove());
+      evts.forEach(k => {
+        const clock = k.clock ? k.clock.displayValue : ""; const type = (k.type && k.type.text) ? k.type.text.toLowerCase() : "";
+        const pName = k.participants ? (k.participants[0].athlete.shortName || k.participants[0].athlete.displayName) : k.text;
+        let icon = "⚡", ex = "";
+        if(type.includes("goal") || type.includes("penalty")) { icon = "⚽"; if(type.includes("penalty")) ex=" (P)"; if(type.includes("own")) ex=" (OG)"; }
+        else if(type.includes("red")) icon = "🟥"; else if(type.includes("yellow")) icon = type.includes("second") ? "🟨🟥" : "🟨";
+        
+        const div = document.createElement("div"); div.className = "timeline-item";
+        if(k.team && k.team.id === homeTeamId) div.innerHTML = `<div class="t-left"><span>${pName}${ex}</span><span class="t-icon">${icon}</span></div><div class="t-center">${clock}</div><div class="t-right"></div>`;
+        else div.innerHTML = `<div class="t-left"></div><div class="t-center">${clock}</div><div class="t-right"><span class="t-icon">${icon}</span><span>${pName}${ex}</span></div>`;
+        c.appendChild(div);
       });
     }
 
@@ -585,276 +308,84 @@
       currentSide = side;
       document.getElementById("btn-team-h").className = side === "home" ? "team-chip active" : "team-chip";
       document.getElementById("btn-team-a").className = side === "away" ? "team-chip active" : "team-chip";
-
-      const pitch = document.getElementById("pitch-board");
-      const oldRows = pitch.querySelectorAll(".formation-row");
-      oldRows.forEach(r => r.remove());
-
-      if (!matchData || !matchData.rosters || matchData.rosters.length === 0) return;
-
-      const rosterObj = matchData.rosters.find(r => r.homeAway === side) || matchData.rosters[0];
-      const formationStr = rosterObj.formation || "4-3-3";
+      const pitch = document.getElementById("pitch-board"); pitch.querySelectorAll(".formation-row").forEach(r => r.remove());
+      const rObj = matchData.rosters.find(r => r.homeAway === side) || matchData.rosters[0];
+      const starters = (rObj.roster || []).filter(p => p.starter); if(!starters.length) return;
+      await fetchWikipediaPhotos(starters.map(p => p.athlete ? p.athlete.displayName : ""));
       
-      const starters = (rosterObj.roster || []).filter(p => p.starter === true);
-      if (starters.length === 0) return;
-
-      const playerNames = starters.map(p => p.athlete ? p.athlete.displayName : "");
-      await fetchWikipediaPhotos(playerNames);
-
-      const formCounts = [1, ...formationStr.split('-').map(n => parseInt(n, 10))];
-      let playerIndex = 0;
-      const reversedCounts = [...formCounts].reverse();
-
-      reversedCounts.forEach((count, rowIndex) => {
-        const rowDiv = document.createElement("div");
-        rowDiv.className = "formation-row";
-
-        const rowPlayers = starters.slice(playerIndex, playerIndex + count);
-        playerIndex += count;
-
-        rowPlayers.forEach(p => {
-          const isGK = rowIndex === (reversedCounts.length - 1);
-          const pDiv = document.createElement("div");
-          pDiv.className = "player-node";
-
-          const fullName = p.athlete ? p.athlete.displayName : "";
-          const pName = p.athlete ? (p.athlete.shortName || p.athlete.displayName) : (p.jersey || "P");
-          const pNum = p.jersey || "-";
-          const pId = p.athlete ? p.athlete.id : null;
+      const counts = [1, ...(rObj.formation || "4-3-3").split('-').map(n => parseInt(n))].reverse();
+      let idx = 0;
+      counts.forEach((c, rIdx) => {
+        const row = document.createElement("div"); row.className = "formation-row";
+        starters.slice(idx, idx + c).forEach(p => {
+          const isGK = rIdx === counts.length - 1;
+          const pId = p.athlete ? p.athlete.id : null, name = p.athlete ? p.athlete.shortName : p.jersey, num = p.jersey || "-";
+          const bg = isGK ? "#f1c40f" : (side==="away" ? "#3498db" : "#00ff85"), color = isGK ? "#000" : (side==="away" ? "#fff" : "#000");
+          const disc = isGK ? "player-disc gk" : (side==="away" ? "player-disc away" : "player-disc home");
+          const url = (p.athlete && playerPhotoCache[p.athlete.displayName]) || (pId ? `https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/${pId}.png&w=120&h=120` : "");
           
-          const badgeBg = isGK ? "#f1c40f" : (side === "away" ? "#3498db" : "#00ff85");
-          const badgeColor = isGK ? "#000" : (side === "away" ? "#fff" : "#000");
-          const discClass = isGK ? "player-disc gk" : (side === "away" ? "player-disc away" : "player-disc home");
-
-          const photoUrl = playerPhotoCache[fullName] || (pId ? `https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/${pId}.png&w=120&h=120&scale=crop` : "");
-
-          pDiv.innerHTML = `
-            <div class="player-avatar-wrap">
-              <div class="${discClass}">${pNum}</div>
-              <img class="player-photo" src="${photoUrl}" referrerpolicy="no-referrer"
-                   onload="onPhotoSuccess(this)"
-                   onerror="onPhotoError(this)">
-              <div class="player-badge" style="background:${badgeBg}; color:${badgeColor};">${pNum}</div>
-            </div>
-            <div class="player-name">${pName}</div>
-          `;
-          rowDiv.appendChild(pDiv);
+          const div = document.createElement("div"); div.className = "player-node";
+          div.innerHTML = `<div class="player-avatar-wrap"><div class="${disc}">${num}</div><img class="player-photo" src="${url}" referrerpolicy="no-referrer" onload="if(this.naturalWidth>15&&!this.src.includes('nophoto')){this.style.display='block';this.parentElement.querySelector('.player-badge').style.display='flex';this.parentElement.querySelector('.player-disc').style.display='none'}else this.remove()" onerror="this.remove()"><div class="player-badge" style="background:${bg};color:${color}">${num}</div></div><div class="player-name">${name}</div>`;
+          row.appendChild(div);
         });
-        pitch.appendChild(rowDiv);
+        idx += c; pitch.appendChild(row);
       });
     }
 
-    function onPhotoSuccess(img) {
-      if (img.naturalWidth > 15 && !img.src.includes("nophoto") && !img.src.includes("blank")) {
-        img.style.display = "block";
-        const wrap = img.parentElement;
-        if (wrap) {
-          const disc = wrap.querySelector(".player-disc");
-          const badge = wrap.querySelector(".player-badge");
-          if (disc) disc.style.display = "none";
-          if (badge) badge.style.display = "flex";
-        }
-      } else {
-        onPhotoError(img);
-      }
-    }
-
-    function onPhotoError(img) {
-      img.remove();
-      const wrap = img.parentElement;
-      if (wrap) {
-        const badge = wrap.querySelector(".player-badge");
-        if (badge) badge.remove();
-        const disc = wrap.querySelector(".player-disc");
-        if (disc) disc.style.display = "flex";
-      }
-    }
-
     function renderStats() {
-      const statsList = document.getElementById("stats-list");
-      statsList.innerHTML = "";
-
-      if (!matchData.boxscore || !matchData.boxscore.teams || matchData.boxscore.teams.length < 2) {
-        document.getElementById("stats-section").style.display = "none";
-        return;
-      }
+      const c = document.getElementById("stats-list"); c.innerHTML = "";
+      if(!matchData.boxscore || !matchData.boxscore.teams) { document.getElementById("stats-section").style.display = "none"; return; }
       document.getElementById("stats-section").style.display = "block";
-
-      const tHome = matchData.boxscore.teams.find(t => t.homeAway === "home") || matchData.boxscore.teams[0];
-      const tAway = matchData.boxscore.teams.find(t => t.homeAway === "away") || matchData.boxscore.teams[1];
-
-      const getVal = (teamObj, statName) => {
-        const st = (teamObj.statistics || []).find(s => s.name === statName || s.label.toLowerCase().includes(statName.toLowerCase()));
-        return st ? parseFloat(st.displayValue) : 0;
-      };
-
-      const statItems = [
-        { label: "เปอร์เซ็นต์ครองบอล (Possession)", key: "possessionPct", unit: "%" },
-        { label: "โอกาสยิงทั้งหมด (Total Shots)", key: "shots", unit: "" },
-        { label: "ยิงตรงกรอบ (Shots on Target)", key: "shotsOnTarget", unit: "" },
-        { label: "เตะมุม (Corner Kicks)", key: "wonCorners", unit: "" },
-        { label: "ฟาวล์ (Fouls)", key: "foulsCommited", unit: "" }
-      ];
-
-      statItems.forEach(item => {
-        const vH = getVal(tHome, item.key);
-        const vA = getVal(tAway, item.key);
-        const total = (vH + vA) > 0 ? (vH + vA) : 1;
-        const pctH = (vH / total) * 100;
-        const pctA = (vA / total) * 100;
-
-        const row = document.createElement("div");
-        row.className = "stat-row";
-        row.innerHTML = `
-          <div class="stat-labels">
-            <span style="color:#00ff85;">${vH}${item.unit}</span>
-            <span style="color:#a0aec0; font-size:11px;">${item.label}</span>
-            <span style="color:#3498db;">${vA}${item.unit}</span>
-          </div>
-          <div class="stat-bar-wrap">
-            <div class="stat-bar-h" style="width: ${pctH}%;"></div>
-            <div class="stat-bar-a" style="width: ${pctA}%;"></div>
-          </div>
-        `;
-        statsList.appendChild(row);
+      const h = matchData.boxscore.teams.find(t => t.homeAway === "home"), a = matchData.boxscore.teams.find(t => t.homeAway === "away");
+      const getV = (obj, n) => { const s = (obj.statistics||[]).find(st => st.name === n); return s ? parseFloat(s.displayValue) : 0; };
+      
+      [{l:"Possession",k:"possessionPct",u:"%"},{l:"Shots",k:"shots",u:""},{l:"On Target",k:"shotsOnTarget",u:""},{l:"Corners",k:"wonCorners",u:""},{l:"Fouls",k:"foulsCommited",u:""}].forEach(i => {
+        const vH=getV(h,i.k), vA=getV(a,i.k), tot=vH+vA>0?vH+vA:1, pH=(vH/tot)*100, pA=(vA/tot)*100;
+        const r = document.createElement("div"); r.className = "stat-row";
+        r.innerHTML = `<div class="stat-labels"><span style="color:#00ff85">${vH}${i.u}</span><span style="color:#a0aec0;font-size:11px">${i.l}</span><span style="color:#3498db">${vA}${i.u}</span></div><div class="stat-bar-wrap"><div class="stat-bar-h" style="width:${pH}%"></div><div class="stat-bar-a" style="width:${pA}%"></div></div>`;
+        c.appendChild(r);
       });
     }
 
     async function savePitchAsImage() {
       try {
-        const target = document.getElementById("pitch-capture-zone");
-        const canvas = await html2canvas(target, { useCORS: true, scale: 2 });
-        const imgData = canvas.toDataURL("image/png");
-        
-        const link = document.createElement("a");
-        link.download = `Lineup-${currentSide}-${currentMatchId}.png`;
-        link.href = imgData;
-        link.click();
-      } catch (err) {
-        alert("ไม่สามารถบันทึกภาพได้ในอุปกรณ์นี้");
-      }
+        const canvas = await html2canvas(document.getElementById("pitch-capture-zone"), { useCORS: true, scale: 2 });
+        const link = document.createElement("a"); link.download = `Lineup-${currentMatchId}.png`; link.href = canvas.toDataURL("image/png"); link.click();
+      } catch(e) { alert("ไม่สามารถบันทึกภาพได้"); }
     }
 
     async function loadStandings() {
+      document.getElementById("standings-tbody").innerHTML = `<tr><td colspan="5" style="text-align:center;color:#a0aec0">กำลังโหลด...</td></tr>`;
       try {
-        const tbody = document.getElementById("standings-tbody");
-        tbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding: 20px; color:#a0aec0;">กำลังโหลดตารางคะแนน...</td></tr>`;
-
         const res = await fetch("https://site.web.api.espn.com/apis/v2/sports/soccer/eng.1/standings");
         const data = await res.json();
-        const entries = (data.children && data.children[0] && data.children[0].standings && data.children[0].standings.entries) || [];
-
-        tbody.innerHTML = "";
-        entries.forEach((e, index) => {
-          const rank = index + 1;
-          const name = e.team.shortDisplayName || e.team.name;
-          const logo = (e.team.logos && e.team.logos[0]) ? e.team.logos[0].href : "";
-
-          const getStat = (n) => {
-            const s = (e.stats || []).find(st => st.name === n || st.type === n);
-            return s ? s.displayValue || s.value : "0";
-          };
-
-          const p = getStat("gamesPlayed");
-          const diff = getStat("pointDifferential") || getStat("goalDifference");
-          const pts = getStat("points");
-
-          let rankClass = "";
-          if (rank <= 4) rankClass = "rank-top4";
-          if (rank >= 18) rankClass = "rank-rel";
-
-          const tr = document.createElement("tr");
-          tr.className = rankClass;
-          tr.innerHTML = `
-            <td style="font-weight:bold; color:${rank <= 4 ? '#3498db' : (rank >= 18 ? '#e74c3c' : '#fff')};">${rank}</td>
-            <td class="team-name-cell">
-              <img src="${logo}" referrerpolicy="no-referrer">
-              <span>${name}</span>
-            </td>
-            <td style="color:#a0aec0;">${p}</td>
-            <td style="color:#a0aec0;">${diff > 0 ? '+' + diff : diff}</td>
-            <td style="font-weight:900; color:#00ff85;">${pts}</td>
-          `;
-          tbody.appendChild(tr);
+        const t = document.getElementById("standings-tbody"); t.innerHTML = "";
+        data.children[0].standings.entries.forEach((e,i) => {
+          const rank = i+1, c = rank<=4 ? "rank-top4" : (rank>=18 ? "rank-rel" : "");
+          const getS = n => e.stats.find(st=>st.name===n).displayValue;
+          t.innerHTML += `<tr class="${c}"><td style="color:${rank<=4?'#3498db':(rank>=18?'#e74c3c':'#fff')}">${rank}</td><td class="team-name-cell"><img src="${e.team.logos[0].href}"><span>${e.team.shortDisplayName}</span></td><td style="color:#a0aec0">${getS('gamesPlayed')}</td><td style="color:#a0aec0">${getS('pointDifferential')}</td><td style="color:#00ff85;font-weight:bold">${getS('points')}</td></tr>`;
         });
         standingsLoaded = true;
-      } catch (e) {
-        document.getElementById("standings-tbody").innerHTML = `<tr><td colspan="5" style="color:#e74c3c;">ไม่สามารถโหลดตารางคะแนนได้</td></tr>`;
-      }
+      } catch(e) {}
     }
 
     async function loadFixtures() {
+      document.getElementById("fixtures-list").innerHTML = `<div style="text-align:center;color:#a0aec0">กำลังโหลด...</div>`;
       try {
-        const listDiv = document.getElementById("fixtures-list");
-        listDiv.innerHTML = `<div style="text-align:center; padding: 20px; color:#a0aec0;">กำลังโหลดโปรแกรมการแข่งขัน...</div>`;
-
         const res = await fetch("https://site.web.api.espn.com/apis/site/v2/sports/soccer/eng.1/scoreboard");
         const data = await res.json();
-        const events = data.events || [];
-
-        if (events.length === 0) {
-          listDiv.innerHTML = `<div style="text-align:center; padding: 20px; color:#a0aec0;">ไม่มีโปรแกรมแข่งขันในช่วงนี้</div>`;
-          return;
-        }
-
-        listDiv.innerHTML = "";
-        events.forEach(evt => {
-          const comp = evt.competitions && evt.competitions[0];
-          if (!comp) return;
-
-          const home = comp.competitors.find(c => c.homeAway === "home");
-          const away = comp.competitors.find(c => c.homeAway === "away");
-          if (!home || !away) return;
-
-          const hName = home.team.shortDisplayName || home.team.name;
-          const aName = away.team.shortDisplayName || away.team.name;
-          const hLogo = home.team.logo || (home.team.logos ? home.team.logos[0].href : "");
-          const aLogo = away.team.logo || (away.team.logos ? away.team.logos[0].href : "");
-
-          const state = evt.status ? evt.status.type.state : "pre";
-          const statusDetail = evt.status ? evt.status.type.shortDetail : "";
-
-          let scoreDisplay = "VS";
-          let statusBadge = `<span class="f-status">${statusDetail}</span>`;
-
-          if (state === "in") {
-            scoreDisplay = `${home.score || 0} - ${away.score || 0}`;
-            statusBadge = `<span class="f-status" style="color:#e74c3c; font-weight:bold;">🔴 ${evt.status.displayClock || 'LIVE'}</span>`;
-          } else if (state === "post") {
-            scoreDisplay = `${home.score || 0} - ${away.score || 0}`;
-            statusBadge = `<span class="f-status" style="color:#00ff85; font-weight:bold;">FT</span>`;
-          }
-
-          const card = document.createElement("div");
-          card.className = "fixture-card";
-          card.onclick = () => {
-            currentMatchId = evt.id;
-            switchTab('match');
-            loadMatchDetails(evt.id);
-          };
-
-          card.innerHTML = `
-            <div class="f-team">
-              <img src="${hLogo}" referrerpolicy="no-referrer">
-              <span>${hName}</span>
-            </div>
-            <div class="f-center">
-              <div class="f-score">${scoreDisplay}</div>
-              ${statusBadge}
-            </div>
-            <div class="f-team away">
-              <span>${aName}</span>
-              <img src="${aLogo}" referrerpolicy="no-referrer">
-            </div>
-          `;
-          listDiv.appendChild(card);
+        const list = document.getElementById("fixtures-list"); list.innerHTML = "";
+        data.events.forEach(evt => {
+          const h = evt.competitions[0].competitors.find(c=>c.homeAway==="home"), a = evt.competitions[0].competitors.find(c=>c.homeAway==="away");
+          const state = evt.status.type.state, badge = state==="in" ? `<span class="f-status" style="color:#e74c3c">🔴 LIVE</span>` : `<span class="f-status">${evt.status.type.shortDetail}</span>`;
+          const c = document.createElement("div"); c.className = "fixture-card";
+          c.onclick = () => { currentMatchId = evt.id; switchTab('match'); loadMatchDetails(evt.id); };
+          c.innerHTML = `<div class="f-team"><img src="${h.team.logo}"><span>${h.team.shortDisplayName}</span></div><div class="f-center"><div class="f-score">${state==="pre"?"VS":`${h.score}-${a.score}`}</div>${badge}</div><div class="f-team away"><span>${a.team.shortDisplayName}</span><img src="${a.team.logo}"></div>`;
+          list.appendChild(c);
         });
         fixturesLoaded = true;
-      } catch (e) {
-        document.getElementById("fixtures-list").innerHTML = `<div style="color:#e74c3c; text-align:center;">ไม่สามารถโหลดโปรแกรมการแข่งขันได้</div>`;
-      }
+      } catch(e) {}
     }
-
     initApp();
   </script>
 </body>
