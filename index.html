@@ -129,20 +129,17 @@
         <div class="score-box" id="m-score-val">VS</div>
         <div class="team-col"><img id="m-away-logo" src=""><div class="name" id="m-away-name">Away</div></div>
       </div>
-      <!-- สนาม & ผู้ตัดสิน -->
       <div class="match-extra-info" id="m-extra-info" style="display:none;">
         <div class="info-item" id="m-venue-wrap">🏟️ สนาม: <span id="m-venue-name">-</span></div>
         <div class="info-item" id="m-ref-wrap">👨‍⚖️ ผู้ตัดสิน: <span id="m-ref-name">-</span></div>
       </div>
     </div>
 
-    <!-- Timeline -->
     <div class="section-card" id="timeline-section" style="display:none;">
       <div class="section-title">⏱️ เหตุการณ์สำคัญในเกม</div>
       <div class="timeline-container" id="timeline-list"><div class="timeline-line"></div></div>
     </div>
 
-    <!-- 2D Pitch -->
     <div class="section-card">
       <div class="section-title">🏟️ ผัง 11 ตัวจริงบนสนาม 2D</div>
       <div class="team-switch-bar">
@@ -164,13 +161,11 @@
       </div>
     </div>
 
-    <!-- Substitutes Section -->
     <div class="section-card" id="subs-section" style="display:none;">
       <div class="section-title" id="subs-title">🪑 ตัวสำรอง (Substitutes)</div>
       <div class="subs-grid" id="subs-list"></div>
     </div>
 
-    <!-- Stats -->
     <div class="section-card" id="stats-section" style="display:none;">
       <div class="section-title">📊 สถิติเกมสด</div>
       <div id="stats-list"></div>
@@ -229,8 +224,9 @@
           params = new URLSearchParams(cleanState);
         }
 
+        // ตรวจจับการกดปุ่มแชร์การ์ด
         if (params.has('t') && params.has('hn')) {
-          document.getElementById("loader-text").innerText = "กำลังเปิดหน้าต่างส่งให้เพื่อน...";
+          document.getElementById("loader-text").innerText = "กำลังจัดเตรียมการ์ดเพื่อส่งต่อ...";
           await executeDirectShare(params);
           return;
         }
@@ -253,44 +249,243 @@
       }
     }
 
+    // ================= ส่งการ์ดแชร์ให้เหมือนรูปแรก 100% =================
     async function executeDirectShare(params) {
       if (!liff.isApiAvailable("shareTargetPicker")) {
         alert("กรุณาเปิดลิงก์ในแอป LINE เพื่อใช้งานฟังก์ชันแชร์");
         liff.closeWindow(); 
         return;
       }
+
       const title = params.get('t') || "MATCH UPDATE";
       const headerColor = "#" + (params.get('c') || "38003c");
-      const homeName = params.get('hn') || "Home";
-      const homeLogo = params.get('hl') || "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png";
-      const awayName = params.get('an') || "Away";
-      const awayLogo = params.get('al') || "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png";
-      const scoreH = params.get('sh') || "0"; 
-      const scoreA = params.get('sa') || "0";
+      let homeName = params.get('hn') || "Home";
+      let homeLogo = params.get('hl') || "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png";
+      let awayName = params.get('an') || "Away";
+      let awayLogo = params.get('al') || "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png";
+      const rawSh = params.get('sh') || "";
+      const rawSa = params.get('sa') || "";
       const detail = params.get('dt') || "";
       const mId = params.get('id') || currentMatchId;
-      const centerText = scoreA !== "" ? `${scoreH} - ${scoreA}` : scoreH;
+
+      // แก้บั๊ก VS - 0: ตรวจสอบสกอร์จริง
+      let centerText = "VS";
+      if (rawSh !== "" && rawSh !== "VS" && rawSa !== "" && rawSa !== "VS") {
+        centerText = `${rawSh} - ${rawSa}`;
+      } else if (rawSh === "VS" || rawSa === "") {
+        centerText = "VS";
+      }
+
+      // ดึงข้อมูลสดจาก ESPN เพื่อเอา 11 ตัวจริงและสนาม
+      let lineupObj = null;
+      let venueName = "";
+
+      try {
+        const res = await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/eng.1/summary?event=${mId}&t=${Date.now()}`);
+        const data = await res.json();
+        const comp = data.header && data.header.competitions && data.header.competitions[0];
+        
+        if (comp) {
+          const h = comp.competitors.find(c => c.homeAway === "home");
+          const a = comp.competitors.find(c => c.homeAway === "away");
+          if (h && h.team) {
+            homeName = h.team.shortDisplayName || h.team.displayName || homeName;
+            homeLogo = (h.team.logos && h.team.logos[0]) ? h.team.logos[0].href : homeLogo;
+          }
+          if (a && a.team) {
+            awayName = a.team.shortDisplayName || a.team.displayName || awayName;
+            awayLogo = (a.team.logos && a.team.logos[0]) ? a.team.logos[0].href : awayLogo;
+          }
+
+          const venue = (data.gameInfo && data.gameInfo.venue) || comp.venue;
+          if (venue && venue.fullName) {
+            venueName = venue.fullName + (venue.address && venue.address.city ? ` (${venue.address.city})` : "");
+          }
+        }
+
+        // ดึง 11 ตัวจริง
+        if (data.rosters && data.rosters.length >= 2) {
+          const hRoster = data.rosters.find(r => r.homeAway === "home") || data.rosters[0];
+          const aRoster = data.rosters.find(r => r.homeAway === "away") || data.rosters[1];
+
+          const parseS = (r) => (r.roster || []).filter(p => p.starter).map(p => {
+            const j = p.jersey ? String(p.jersey) : "-";
+            let n = p.athlete ? (p.athlete.shortName || p.athlete.displayName) : j;
+            const isGK = (p.position && (p.position.abbreviation === "G" || p.position.abbreviation === "GK")) ||
+                         (p.athlete && p.athlete.position && (p.athlete.position.abbreviation === "G" || p.athlete.position.abbreviation === "GK"));
+            if (isGK && !n.includes("(GK)")) n += " (GK)";
+            return { jersey: j, name: n };
+          }).slice(0, 11);
+
+          const hStarters = parseS(hRoster);
+          const aStarters = parseS(aRoster);
+          if (hStarters.length > 0 && aStarters.length > 0) {
+            lineupObj = { homeStarters: hStarters, awayStarters: aStarters };
+          }
+        }
+      } catch (e) {}
+
+      const isLineupPreview = (lineupObj !== null) || (detail === "STARTING LINEUPS") || title.includes("11 ตัวจริง");
+      const bubbleSize = isLineupPreview ? "mega" : "kilo";
+
+      const bodyContents = [
+        {
+          "type": "box",
+          "layout": "horizontal",
+          "alignItems": "center",
+          "contents": [
+            {
+              "type": "box",
+              "layout": "vertical",
+              "alignItems": "center",
+              "flex": 4,
+              "contents": [
+                { "type": "image", "url": homeLogo, "size": "40px", "aspectMode": "fit" },
+                { "type": "text", "text": homeName, "size": "xs", "weight": "bold", "wrap": true, "align": "center", "margin": "sm", "color": "#ffffff" }
+              ]
+            },
+            {
+              "type": "box",
+              "layout": "vertical",
+              "alignItems": "center",
+              "flex": 3,
+              "contents": [
+                { "type": "text", "text": centerText, "size": "lg", "weight": "bold", "align": "center", "color": "#ffffff" },
+                { "type": "text", "text": "PL", "size": "xxs", "color": "#aaaaaa" }
+              ]
+            },
+            {
+              "type": "box",
+              "layout": "vertical",
+              "alignItems": "center",
+              "flex": 4,
+              "contents": [
+                { "type": "image", "url": awayLogo, "size": "40px", "aspectMode": "fit" },
+                { "type": "text", "text": awayName, "size": "xs", "weight": "bold", "wrap": true, "align": "center", "margin": "sm", "color": "#ffffff" }
+              ]
+            }
+          ]
+        }
+      ];
+
+      if (venueName) {
+        bodyContents.push({
+          "type": "box",
+          "layout": "horizontal",
+          "justifyContent": "center",
+          "alignItems": "center",
+          "margin": "sm",
+          "contents": [
+            { "type": "text", "text": `🏟️ ${venueName}`, "size": "xxs", "color": "#7f8c8d", "align": "center", "wrap": true }
+          ]
+        });
+      }
+
+      bodyContents.push({ "type": "separator", "margin": "md", "color": "#ffffff22" });
+
+      if (isLineupPreview && lineupObj) {
+        bodyContents.push({
+          "type": "box",
+          "layout": "vertical",
+          "backgroundColor": "#0d131d",
+          "paddingAll": "5px",
+          "cornerRadius": "6px",
+          "margin": "md",
+          "contents": [
+            { "type": "text", "text": "STARTING LINEUPS", "size": "xxs", "color": "#00ff85", "weight": "bold", "align": "center" }
+          ]
+        });
+
+        const homeRows = lineupObj.homeStarters.map(p => ({
+          "type": "box",
+          "layout": "horizontal",
+          "alignItems": "center",
+          "contents": [
+            { "type": "text", "text": p.jersey, "size": "xxs", "weight": "bold", "color": "#00ff85", "flex": 0 },
+            { "type": "text", "text": p.name, "size": "xxs", "color": "#ffffff", "margin": "sm", "wrap": false, "weight": "bold" }
+          ]
+        }));
+
+        const awayRows = lineupObj.awayStarters.map(p => ({
+          "type": "box",
+          "layout": "horizontal",
+          "alignItems": "center",
+          "justifyContent": "flex-end",
+          "contents": [
+            { "type": "text", "text": p.name, "size": "xxs", "color": "#ffffff", "wrap": false, "align": "end", "weight": "bold" },
+            { "type": "text", "text": p.jersey, "size": "xxs", "weight": "bold", "color": "#3498db", "margin": "sm", "flex": 0, "align": "end" }
+          ]
+        }));
+
+        bodyContents.push({
+          "type": "box",
+          "layout": "horizontal",
+          "margin": "md",
+          "contents": [
+            { "type": "box", "layout": "vertical", "flex": 5, "spacing": "xs", "contents": homeRows },
+            { "type": "separator", "color": "#ffffff22" },
+            { "type": "box", "layout": "vertical", "flex": 5, "spacing": "xs", "contents": awayRows }
+          ]
+        });
+      } else {
+        bodyContents.push({
+          "type": "box",
+          "layout": "vertical",
+          "margin": "md",
+          "contents": [
+            { "type": "text", "text": detail, "size": "xs", "color": "#ffffff", "weight": "bold", "wrap": true, "align": "center" }
+          ]
+        });
+      }
 
       const flexMsg = {
-        "type": "flex", "altText": `${title}: ${homeName} vs ${awayName}`,
+        "type": "flex",
+        "altText": `${title}: ${homeName} vs ${awayName}`,
         "contents": {
-          "type": "bubble", "size": "kilo",
-          "header": { "type": "box", "layout": "vertical", "backgroundColor": headerColor, "contents": [ { "type": "text", "text": title, "color": "#ffffff", "weight": "bold", "size": "md", "align": "center" } ] },
-          "body": {
-            "type": "box", "layout": "vertical", "contents": [
-              { "type": "box", "layout": "horizontal", "alignItems": "center", "contents": [
-                { "type": "box", "layout": "vertical", "alignItems": "center", "flex": 4, "contents": [ { "type": "image", "url": homeLogo, "size": "xs", "aspectMode": "fit" }, { "type": "text", "text": homeName, "size": "xs", "weight": "bold", "wrap": true, "align": "center", "margin": "sm" } ] },
-                { "type": "box", "layout": "vertical", "alignItems": "center", "flex": 3, "contents": [ { "type": "text", "text": centerText, "size": "lg", "weight": "bold", "align": "center" }, { "type": "text", "text": "PL", "size": "xxs", "color": "#aaaaaa" } ] },
-                { "type": "box", "layout": "vertical", "alignItems": "center", "flex": 4, "contents": [ { "type": "image", "url": awayLogo, "size": "xs", "aspectMode": "fit" }, { "type": "text", "text": awayName, "size": "xs", "weight": "bold", "wrap": true, "align": "center", "margin": "sm" } ] }
-              ]},
-              { "type": "separator", "margin": "md" },
-              { "type": "box", "layout": "vertical", "margin": "md", "contents": [ { "type": "text", "text": detail, "size": "xs", "color": "#2c3e50", "weight": "bold", "wrap": true, "align": "center" } ] }
+          "type": "bubble",
+          "size": bubbleSize,
+          "header": {
+            "type": "box",
+            "layout": "vertical",
+            "backgroundColor": headerColor,
+            "contents": [
+              { "type": "text", "text": title, "color": "#ffffff", "weight": "bold", "size": "md", "align": "center" }
             ]
           },
+          "body": {
+            "type": "box",
+            "layout": "vertical",
+            "backgroundColor": "#161b26",
+            "contents": bodyContents
+          },
           "footer": {
-            "type": "box", "layout": "vertical", "spacing": "sm", "contents": [
-              { "type": "button", "style": "primary", "height": "sm", "color": "#1b5e20", "action": { "type": "uri", "label": "🏟️ ผัง 11 ตัวจริงบนสนาม 2D", "uri": `https://liff.line.me/${LIFF_ID}?id=${mId}` } },
-              { "type": "button", "style": "secondary", "height": "sm", "color": "#f0f2f5", "action": { "type": "uri", "label": "แชร์การ์ดให้เพื่อน ↗️", "uri": `https://liff.line.me/${LIFF_ID}?${params.toString()}` } }
+            "type": "box",
+            "layout": "vertical",
+            "spacing": "sm",
+            "backgroundColor": "#161b26",
+            "contents": [
+              {
+                "type": "button",
+                "style": "primary",
+                "height": "sm",
+                "color": "#1b5e20",
+                "action": {
+                  "type": "uri",
+                  "label": "🏟️ ผัง 11 ตัวจริงบนสนาม 2D",
+                  "uri": `https://liff.line.me/${LIFF_ID}?id=${mId}`
+                }
+              },
+              {
+                "type": "button",
+                "style": "secondary",
+                "height": "sm",
+                "color": "#232a3b",
+                "action": {
+                  "type": "uri",
+                  "label": "แชร์การ์ดให้เพื่อน ↗️",
+                  "uri": `https://liff.line.me/${LIFF_ID}?${params.toString()}`
+                }
+              }
             ]
           }
         }
@@ -298,8 +493,10 @@
 
       try {
         const res = await liff.shareTargetPicker([flexMsg]);
-        if(res) liff.closeWindow(); else liff.closeWindow();
-      } catch(e) { liff.closeWindow(); }
+        if (res) liff.closeWindow(); else liff.closeWindow();
+      } catch (e) {
+        liff.closeWindow();
+      }
     }
 
     async function shareCurrentMatch() {
@@ -364,9 +561,7 @@
         document.getElementById("btn-team-a").innerText = `✈️ ${aName}`;
         document.getElementById("m-score-val").innerText = h.score !== undefined ? `${h.score} - ${a.score}` : "VS";
         
-        // Render Venue & Referee
         renderMatchInfo(comp);
-
         renderTimeline(); 
         await renderTeamPitch("home"); 
         renderStats();
@@ -378,14 +573,12 @@
       }
     }
 
-    // ดึงสนามและผู้ตัดสิน
     function renderMatchInfo(comp) {
       const extraWrap = document.getElementById("m-extra-info");
       const venueWrap = document.getElementById("m-venue-wrap");
       const refWrap = document.getElementById("m-ref-wrap");
       let hasExtra = false;
 
-      // 1. สนามแข่งขัน
       const venue = (matchData.gameInfo && matchData.gameInfo.venue) || comp.venue;
       if (venue && venue.fullName) {
         const city = venue.address && venue.address.city ? ` (${venue.address.city})` : "";
@@ -396,7 +589,6 @@
         venueWrap.style.display = "none";
       }
 
-      // 2. ผู้ตัดสิน
       const officials = (matchData.gameInfo && matchData.gameInfo.officials) || comp.officials || [];
       const referee = officials.find(o => (o.position && o.position.name && o.position.name.toLowerCase().includes("referee")) || (o.role && o.role.toLowerCase().includes("referee"))) || officials[0];
       
@@ -459,9 +651,7 @@
       }
       noLineupMsg.style.display = "none";
 
-      // แสดงรายชื่อตัวสำรอง
       renderSubstitutes(substitutes, side);
-
       await fetchWikipediaPhotos(starters.map(p => p.athlete ? p.athlete.displayName : ""));
       
       const formationStr = rObj.formation || "4-3-3";
@@ -519,7 +709,6 @@
       });
     }
 
-    // ฟังก์ชันแสดงตัวสำรอง
     function renderSubstitutes(subs, side) {
       const subsSection = document.getElementById("subs-section");
       const subsList = document.getElementById("subs-list");
