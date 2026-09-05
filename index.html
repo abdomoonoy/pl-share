@@ -9,16 +9,27 @@
   <style>
     * { box-sizing: border-box; margin: 0; padding: 0; }
     body { font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; background: #0b0e14; color: #fff; min-height: 100vh; padding: 12px; }
+    
     .main-nav { display: flex; gap: 6px; background: #161b26; padding: 6px; border-radius: 12px; margin-bottom: 14px; border: 1px solid rgba(255,255,255,0.08); }
     .nav-tab-btn { flex: 1; padding: 8px 4px; background: transparent; border: none; border-radius: 8px; color: #a0aec0; font-size: 12px; font-weight: bold; cursor: pointer; text-align: center; }
     .nav-tab-btn.active { background: #38003c; color: #00ff85; box-shadow: 0 2px 6px rgba(0,0,0,0.4); }
-    .tab-view { display: none; } .tab-view.active { display: block; }
+    
+    .tab-view { display: none; } 
+    .tab-view.active { display: block; }
+    
+    /* Header Scoreboard & Match Info */
     .match-header { background: #161b26; border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.08); }
     .status-badge { text-align: center; font-size: 11px; font-weight: bold; color: #00ff85; text-transform: uppercase; margin-bottom: 8px; }
     .score-row { display: flex; align-items: center; justify-content: space-between; }
-    .team-col { flex: 1; text-align: center; } .team-col img { width: 44px; height: 44px; object-fit: contain; }
+    .team-col { flex: 1; text-align: center; } 
+    .team-col img { width: 44px; height: 44px; object-fit: contain; }
     .team-col .name { font-size: 12px; font-weight: bold; margin-top: 4px; }
     .score-box { font-size: 24px; font-weight: 900; color: #fff; flex: 0.8; text-align: center; letter-spacing: 2px; }
+    
+    .match-extra-info { margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 4px; font-size: 11px; color: #a0aec0; text-align: center; }
+    .info-item span { color: #fff; font-weight: 600; }
+
+    /* Timeline Section */
     .section-card { background: #161b26; border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.05); }
     .section-title { font-size: 13px; color: #00ff85; margin-bottom: 14px; text-align: center; font-weight: bold; }
     .timeline-container { position: relative; width: 100%; display: flex; flex-direction: column; gap: 10px; }
@@ -28,6 +39,8 @@
     .t-center { min-width: 32px; height: 22px; background: #232a3b; border: 1px solid rgba(255,255,255,0.2); border-radius: 11px; font-size: 10px; font-weight: bold; color: #00ff85; display: flex; align-items: center; justify-content: center; z-index: 3; }
     .t-right { flex: 1; display: flex; justify-content: flex-start; align-items: center; gap: 6px; padding-left: 12px; font-size: 12px; font-weight: bold; text-align: left; }
     .t-icon { font-size: 14px; }
+
+    /* 2D Pitch */
     .pitch-capture-area { background: #161b26; border-radius: 14px; padding: 12px; }
     .pitch-container { position: relative; width: 100%; aspect-ratio: 2 / 3; max-width: 400px; margin: 0 auto; background: repeating-linear-gradient(0deg, #165b27, #165b27 10%, #19692d 10%, #19692d 20%); border: 2px solid rgba(255,255,255,0.8); border-radius: 12px; overflow: hidden; box-shadow: 0 8px 24px rgba(0,0,0,0.6); display: flex; flex-direction: column; justify-content: space-around; padding: 14px 6px; }
     .pitch-center-line { position: absolute; top: 50%; left: 0; right: 0; height: 2px; background: rgba(255,255,255,0.6); pointer-events: none; }
@@ -36,6 +49,7 @@
     .pitch-box-bottom { position: absolute; bottom: 0; left: 20%; right: 20%; height: 16%; border: 2px solid rgba(255,255,255,0.6); border-bottom: none; pointer-events: none; }
     .pitch-empty-msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.85); padding: 14px 18px; border-radius: 10px; font-size: 12px; text-align: center; color: #f1c40f; border: 1px solid rgba(241,196,15,0.3); z-index: 10; width: 85%; }
     .formation-row { position: relative; z-index: 2; display: flex; justify-content: space-around; align-items: center; width: 100%; }
+    
     .player-node { display: flex; flex-direction: column; align-items: center; width: 70px; }
     .player-avatar-wrap { position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
     .player-photo { width: 44px; height: 44px; border-radius: 50%; object-fit: cover; background: #232a3b; border: 2px solid #ffffff; display: none; }
@@ -45,26 +59,49 @@
     .player-disc.away { background: linear-gradient(135deg, #3498db, #2980b9); }
     .player-disc.gk { background: linear-gradient(135deg, #f1c40f, #d4ac0d); color: #000; }
     .player-name { font-size: 10px; font-weight: bold; color: #fff; background: rgba(0,0,0,0.85); padding: 2px 6px; border-radius: 4px; margin-top: 3px; max-width: 68px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; text-align: center; }
+    
     .team-switch-bar { display: flex; justify-content: center; gap: 8px; margin-bottom: 10px; }
     .team-chip { padding: 6px 14px; border-radius: 20px; font-size: 12px; font-weight: bold; background: #161b26; border: 1px solid rgba(255,255,255,0.1); color: #fff; cursor: pointer; }
     .team-chip.active { background: #00ff85; color: #000; border-color: #00ff85; }
+    
     .pitch-action-bar { display: flex; justify-content: center; gap: 8px; margin-top: 14px; }
     .action-btn { flex: 1; max-width: 190px; padding: 10px; border-radius: 10px; font-size: 12px; font-weight: bold; border: none; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 6px; }
     .btn-save { background: #232a3b; color: #00ff85; border: 1px solid rgba(0,255,133,0.3); }
     .btn-share { background: #00ff85; color: #000; }
-    .stat-row { margin-bottom: 12px; } .stat-labels { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; margin-bottom: 4px; }
+
+    /* Substitutes UI */
+    .subs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(135px, 1fr)); gap: 8px; margin-top: 8px; }
+    .sub-item { display: flex; align-items: center; gap: 8px; background: #202736; padding: 6px 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.05); }
+    .sub-num { min-width: 20px; height: 20px; background: #38003c; color: #00ff85; font-size: 10px; font-weight: 900; border-radius: 4px; display: flex; align-items: center; justify-content: center; }
+    .sub-meta { overflow: hidden; }
+    .sub-name { font-size: 11px; font-weight: bold; color: #fff; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .sub-pos { font-size: 9px; color: #a0aec0; }
+
+    /* Stats */
+    .stat-row { margin-bottom: 12px; } 
+    .stat-labels { display: flex; justify-content: space-between; font-size: 12px; font-weight: bold; margin-bottom: 4px; }
     .stat-bar-wrap { display: flex; height: 6px; background: rgba(255,255,255,0.1); border-radius: 3px; overflow: hidden; }
-    .stat-bar-h { background: #00ff85; height: 100%; } .stat-bar-a { background: #3498db; height: 100%; }
-    .table-responsive { overflow-x: auto; width: 100%; } .standings-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
+    .stat-bar-h { background: #00ff85; height: 100%; } 
+    .stat-bar-a { background: #3498db; height: 100%; }
+
+    /* Standings & Fixtures */
+    .table-responsive { overflow-x: auto; width: 100%; } 
+    .standings-tbl { width: 100%; border-collapse: collapse; font-size: 12px; }
     .standings-tbl th { color: #a0aec0; padding: 8px 4px; font-weight: bold; border-bottom: 1px solid rgba(255,255,255,0.1); }
     .standings-tbl td { padding: 8px 4px; border-bottom: 1px solid rgba(255,255,255,0.05); text-align: center; }
     .standings-tbl td.team-name-cell { text-align: left; display: flex; align-items: center; gap: 6px; font-weight: bold; }
     .standings-tbl img { width: 18px; height: 18px; object-fit: contain; }
-    .rank-top4 { border-left: 3px solid #3498db; } .rank-rel { border-left: 3px solid #e74c3c; }
+    .rank-top4 { border-left: 3px solid #3498db; } 
+    .rank-rel { border-left: 3px solid #e74c3c; }
+    
     .fixture-card { background: #161b26; border-radius: 12px; padding: 12px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between; border: 1px solid rgba(255,255,255,0.06); cursor: pointer; }
-    .f-team { display: flex; align-items: center; gap: 8px; flex: 1; font-size: 12px; font-weight: bold; } .f-team.away { justify-content: flex-end; }
+    .f-team { display: flex; align-items: center; gap: 8px; flex: 1; font-size: 12px; font-weight: bold; } 
+    .f-team.away { justify-content: flex-end; }
     .f-team img { width: 24px; height: 24px; object-fit: contain; }
-    .f-center { min-width: 60px; text-align: center; } .f-score { font-size: 14px; font-weight: 900; color: #00ff85; } .f-status { font-size: 10px; color: #a0aec0; margin-top: 2px; }
+    .f-center { min-width: 60px; text-align: center; } 
+    .f-score { font-size: 14px; font-weight: 900; color: #00ff85; } 
+    .f-status { font-size: 10px; color: #a0aec0; margin-top: 2px; }
+    
     .center-spinner { text-align: center; padding: 40px 0; }
     .spin { border: 3px solid rgba(255,255,255,0.1); border-top: 3px solid #00ff85; border-radius: 50%; width: 36px; height: 36px; animation: sp 0.8s linear infinite; margin: 0 auto 12px; }
     @keyframes sp { 100% { transform: rotate(360deg); } }
@@ -83,6 +120,7 @@
     <p id="loader-text" style="font-size: 13px; color: #a0aec0;">กำลังโหลดข้อมูล...</p>
   </div>
 
+  <!-- VIEW: MATCH CENTER -->
   <div id="view-match" class="tab-view active" style="display: none;">
     <div class="match-header">
       <div class="status-badge" id="m-status">PREMIER LEAGUE</div>
@@ -91,11 +129,20 @@
         <div class="score-box" id="m-score-val">VS</div>
         <div class="team-col"><img id="m-away-logo" src=""><div class="name" id="m-away-name">Away</div></div>
       </div>
+      <!-- สนาม & ผู้ตัดสิน -->
+      <div class="match-extra-info" id="m-extra-info" style="display:none;">
+        <div class="info-item" id="m-venue-wrap">🏟️ สนาม: <span id="m-venue-name">-</span></div>
+        <div class="info-item" id="m-ref-wrap">👨‍⚖️ ผู้ตัดสิน: <span id="m-ref-name">-</span></div>
+      </div>
     </div>
+
+    <!-- Timeline -->
     <div class="section-card" id="timeline-section" style="display:none;">
       <div class="section-title">⏱️ เหตุการณ์สำคัญในเกม</div>
       <div class="timeline-container" id="timeline-list"><div class="timeline-line"></div></div>
     </div>
+
+    <!-- 2D Pitch -->
     <div class="section-card">
       <div class="section-title">🏟️ ผัง 11 ตัวจริงบนสนาม 2D</div>
       <div class="team-switch-bar">
@@ -116,9 +163,21 @@
         <button class="action-btn btn-share" onclick="shareCurrentMatch()">📤 แชร์ผังนี้ให้เพื่อน</button>
       </div>
     </div>
-    <div class="section-card" id="stats-section" style="display:none;"><div class="section-title">📊 สถิติเกมสด</div><div id="stats-list"></div></div>
+
+    <!-- Substitutes Section -->
+    <div class="section-card" id="subs-section" style="display:none;">
+      <div class="section-title" id="subs-title">🪑 ตัวสำรอง (Substitutes)</div>
+      <div class="subs-grid" id="subs-list"></div>
+    </div>
+
+    <!-- Stats -->
+    <div class="section-card" id="stats-section" style="display:none;">
+      <div class="section-title">📊 สถิติเกมสด</div>
+      <div id="stats-list"></div>
+    </div>
   </div>
 
+  <!-- VIEW: STANDINGS -->
   <div id="view-standings" class="tab-view">
     <div class="section-card">
       <div class="section-title">🏆 ตารางคะแนนพรีเมียร์ลีก</div>
@@ -131,6 +190,7 @@
     </div>
   </div>
 
+  <!-- VIEW: FIXTURES -->
   <div id="view-fixtures" class="tab-view">
     <div class="section-card">
       <div class="section-title">📅 แมตช์วันนี้ & ผลบอลสด</div>
@@ -140,8 +200,13 @@
 
   <script>
     const LIFF_ID = "2011335665-i2smhkIR";
-    let matchData = null; let homeTeamId = null, awayTeamId = null; let currentMatchId = "700500"; let currentSide = "home";
-    const playerPhotoCache = {}; let standingsLoaded = false; let fixturesLoaded = false;
+    let matchData = null; 
+    let homeTeamId = null, awayTeamId = null; 
+    let currentMatchId = "700500"; 
+    let currentSide = "home";
+    const playerPhotoCache = {}; 
+    let standingsLoaded = false; 
+    let fixturesLoaded = false;
 
     function switchTab(tab) {
       document.querySelectorAll(".nav-tab-btn").forEach(b => b.classList.remove("active"));
@@ -173,9 +238,16 @@
         currentMatchId = params.get('id') || "700500";
         const typeParam = params.get('type');
         
-        if (typeParam === 'standings') { switchTab('standings'); loadMatchDetails(currentMatchId); }
-        else if (typeParam === 'fixtures') { switchTab('fixtures'); loadMatchDetails(currentMatchId); }
-        else { switchTab('match'); await loadMatchDetails(currentMatchId); }
+        if (typeParam === 'standings') { 
+          switchTab('standings'); 
+          loadMatchDetails(currentMatchId); 
+        } else if (typeParam === 'fixtures') { 
+          switchTab('fixtures'); 
+          loadMatchDetails(currentMatchId); 
+        } else { 
+          switchTab('match'); 
+          await loadMatchDetails(currentMatchId); 
+        }
       } catch (err) {
         document.getElementById("loader").innerHTML = `<p style="color:#e74c3c;">เกิดข้อผิดพลาด: ${err.message}</p>`;
       }
@@ -184,7 +256,8 @@
     async function executeDirectShare(params) {
       if (!liff.isApiAvailable("shareTargetPicker")) {
         alert("กรุณาเปิดลิงก์ในแอป LINE เพื่อใช้งานฟังก์ชันแชร์");
-        liff.closeWindow(); return;
+        liff.closeWindow(); 
+        return;
       }
       const title = params.get('t') || "MATCH UPDATE";
       const headerColor = "#" + (params.get('c') || "38003c");
@@ -192,7 +265,8 @@
       const homeLogo = params.get('hl') || "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png";
       const awayName = params.get('an') || "Away";
       const awayLogo = params.get('al') || "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png";
-      const scoreH = params.get('sh') || "0"; const scoreA = params.get('sa') || "0";
+      const scoreH = params.get('sh') || "0"; 
+      const scoreA = params.get('sa') || "0";
       const detail = params.get('dt') || "";
       const mId = params.get('id') || currentMatchId;
       const centerText = scoreA !== "" ? `${scoreH} - ${scoreA}` : scoreH;
@@ -274,18 +348,25 @@
         matchData = await res.json();
         const comp = matchData.header.competitions[0];
         const h = comp.competitors.find(c => c.homeAway === "home"), a = comp.competitors.find(c => c.homeAway === "away");
-        homeTeamId = h.id; awayTeamId = a.id;
+        homeTeamId = h.id; 
+        awayTeamId = a.id;
         
         const getLogo = (t) => (t.team.logos && t.team.logos[0]) ? t.team.logos[0].href : (t.team.logo || "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png");
         const getName = (t) => t.team.shortDisplayName || t.team.displayName || t.team.name || "Team";
 
         const hName = getName(h), aName = getName(a);
         document.getElementById("m-status").innerText = matchData.header.league.name + " • " + (matchData.header.status ? matchData.header.status.type.detail : "");
-        document.getElementById("m-home-name").innerText = hName; document.getElementById("m-home-logo").src = getLogo(h);
-        document.getElementById("m-away-name").innerText = aName; document.getElementById("m-away-logo").src = getLogo(a);
-        document.getElementById("btn-team-h").innerText = `🏠 ${hName}`; document.getElementById("btn-team-a").innerText = `✈️ ${aName}`;
+        document.getElementById("m-home-name").innerText = hName; 
+        document.getElementById("m-home-logo").src = getLogo(h);
+        document.getElementById("m-away-name").innerText = aName; 
+        document.getElementById("m-away-logo").src = getLogo(a);
+        document.getElementById("btn-team-h").innerText = `🏠 ${hName}`; 
+        document.getElementById("btn-team-a").innerText = `✈️ ${aName}`;
         document.getElementById("m-score-val").innerText = h.score !== undefined ? `${h.score} - ${a.score}` : "VS";
         
+        // Render Venue & Referee
+        renderMatchInfo(comp);
+
         renderTimeline(); 
         await renderTeamPitch("home"); 
         renderStats();
@@ -297,6 +378,39 @@
       }
     }
 
+    // ดึงสนามและผู้ตัดสิน
+    function renderMatchInfo(comp) {
+      const extraWrap = document.getElementById("m-extra-info");
+      const venueWrap = document.getElementById("m-venue-wrap");
+      const refWrap = document.getElementById("m-ref-wrap");
+      let hasExtra = false;
+
+      // 1. สนามแข่งขัน
+      const venue = (matchData.gameInfo && matchData.gameInfo.venue) || comp.venue;
+      if (venue && venue.fullName) {
+        const city = venue.address && venue.address.city ? ` (${venue.address.city})` : "";
+        document.getElementById("m-venue-name").innerText = `${venue.fullName}${city}`;
+        venueWrap.style.display = "block";
+        hasExtra = true;
+      } else {
+        venueWrap.style.display = "none";
+      }
+
+      // 2. ผู้ตัดสิน
+      const officials = (matchData.gameInfo && matchData.gameInfo.officials) || comp.officials || [];
+      const referee = officials.find(o => (o.position && o.position.name && o.position.name.toLowerCase().includes("referee")) || (o.role && o.role.toLowerCase().includes("referee"))) || officials[0];
+      
+      if (referee && referee.displayName) {
+        document.getElementById("m-ref-name").innerText = referee.displayName;
+        refWrap.style.display = "block";
+        hasExtra = true;
+      } else {
+        refWrap.style.display = "none";
+      }
+
+      extraWrap.style.display = hasExtra ? "flex" : "none";
+    }
+
     function renderTimeline() {
       const c = document.getElementById("timeline-list");
       const evts = matchData.keyEvents || [];
@@ -304,7 +418,8 @@
       document.getElementById("timeline-section").style.display = "block";
       c.querySelectorAll(".timeline-item").forEach(i => i.remove());
       evts.forEach(k => {
-        const clock = k.clock ? k.clock.displayValue : ""; const type = (k.type && k.type.text) ? k.type.text.toLowerCase() : "";
+        const clock = k.clock ? k.clock.displayValue : ""; 
+        const type = (k.type && k.type.text) ? k.type.text.toLowerCase() : "";
         const pName = k.participants ? (k.participants[0].athlete.shortName || k.participants[0].athlete.displayName) : k.text;
         let icon = "⚡", ex = "";
         if(type.includes("goal") || type.includes("penalty")) { icon = "⚽"; if(type.includes("penalty")) ex=" (P)"; if(type.includes("own")) ex=" (OG)"; }
@@ -317,7 +432,6 @@
       });
     }
 
-    // ================= คำนวณผัง 2D ให้ตรงตำแหน่งจริง 100% =================
     async function renderTeamPitch(side) {
       currentSide = side;
       document.getElementById("btn-team-h").className = side === "home" ? "team-chip active" : "team-chip";
@@ -326,58 +440,54 @@
       pitch.querySelectorAll(".formation-row").forEach(r => r.remove());
 
       const noLineupMsg = document.getElementById("pitch-no-lineup");
+      const subsSection = document.getElementById("subs-section");
 
       if (!matchData.rosters || matchData.rosters.length === 0) {
         noLineupMsg.style.display = "block";
+        subsSection.style.display = "none";
         return;
       }
 
       const rObj = matchData.rosters.find(r => r.homeAway === side) || matchData.rosters[0];
       const starters = (rObj && rObj.roster) ? rObj.roster.filter(p => p.starter) : [];
+      const substitutes = (rObj && rObj.roster) ? rObj.roster.filter(p => !p.starter) : [];
       
       if (starters.length === 0) {
         noLineupMsg.style.display = "block";
+        subsSection.style.display = "none";
         return;
       }
       noLineupMsg.style.display = "none";
 
+      // แสดงรายชื่อตัวสำรอง
+      renderSubstitutes(substitutes, side);
+
       await fetchWikipediaPhotos(starters.map(p => p.athlete ? p.athlete.displayName : ""));
       
-      // 1. วิเคราะห์แผนการเล่น (เช่น 4-3-3, 4-2-3-1)
       const formationStr = rObj.formation || "4-3-3";
       const formationParts = formationStr.split('-').map(n => parseInt(n, 10)).filter(n => !isNaN(n));
       const outfieldCount = formationParts.reduce((a, b) => a + b, 0);
       
-      // ป้องกันกรณี ESPN ส่งแผนไม่ครบ 10 คน
       let lineCounts = [1, ...formationParts];
       if (outfieldCount !== 10) {
         lineCounts = [1, 4, 3, 3];
       }
 
-      // 2. แบ่งกลุ่มนักเตะตามโซนจากหลังไปหน้า: [ผู้รักษาประตู, กองหลัง, กองกลาง, กองหน้า]
       let cursor = 0;
       const tacticalLines = lineCounts.map((count, lineIdx) => {
         const line = starters.slice(cursor, cursor + count);
         cursor += count;
-        
-        // ESPN เรียงนักเตะจากขวาไปซ้าย (RB -> CB -> LB, RW -> ST -> LW)
-        // เมื่อนำมาขึ้นจอแนวหน้า ต้องกลับด้านเพื่อให้นักเตะฝั่งซ้าย (LB/LW) อยู่ฝั่งซ้ายของจอ
         if (lineIdx > 0) {
           return [...line].reverse();
         }
         return line;
       });
 
-      // 3. จัดเรียงแถวสนามจากบนลงล่าง:
-      // แดนบนสุด = แดนหน้า (Attack)
-      // แดนล่างสุด = ผู้รักษาประตู (GK)
       const pitchRows = [...tacticalLines].reverse();
 
       pitchRows.forEach((rowPlayers, rIdx) => {
         const row = document.createElement("div"); 
         row.className = "formation-row";
-        
-        // แถวล่างสุดคือผู้รักษาประตู
         const isGKRow = (rIdx === pitchRows.length - 1);
 
         rowPlayers.forEach(p => {
@@ -407,6 +517,40 @@
         });
         pitch.appendChild(row);
       });
+    }
+
+    // ฟังก์ชันแสดงตัวสำรอง
+    function renderSubstitutes(subs, side) {
+      const subsSection = document.getElementById("subs-section");
+      const subsList = document.getElementById("subs-list");
+      const subsTitle = document.getElementById("subs-title");
+
+      if (!subs || subs.length === 0) {
+        subsSection.style.display = "none";
+        return;
+      }
+
+      subsTitle.innerText = `🪑 ตัวสำรอง (${side === 'home' ? 'ทีมเหย้า' : 'ทีมเยือน'})`;
+      subsList.innerHTML = "";
+
+      subs.forEach(p => {
+        const num = p.jersey || "-";
+        const name = p.athlete ? (p.athlete.shortName || p.athlete.displayName) : "Player";
+        const pos = (p.position && (p.position.abbreviation || p.position.name)) || (p.athlete && p.athlete.position && p.athlete.position.abbreviation) || "";
+
+        const item = document.createElement("div");
+        item.className = "sub-item";
+        item.innerHTML = `
+          <div class="sub-num">${num}</div>
+          <div class="sub-meta">
+            <div class="sub-name">${name}</div>
+            <div class="sub-pos">${pos}</div>
+          </div>
+        `;
+        subsList.appendChild(item);
+      });
+
+      subsSection.style.display = "block";
     }
 
     function renderStats() {
