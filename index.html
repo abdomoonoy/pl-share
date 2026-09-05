@@ -16,7 +16,7 @@
     .match-header { background: #161b26; border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.08); }
     .status-badge { text-align: center; font-size: 11px; font-weight: bold; color: #00ff85; text-transform: uppercase; margin-bottom: 8px; }
     .score-row { display: flex; align-items: center; justify-content: space-between; }
-    .team-col { flex: 1; text-align: center; } .team-col img { width: 42px; height: 42px; object-fit: contain; }
+    .team-col { flex: 1; text-align: center; } .team-col img { width: 44px; height: 44px; object-fit: contain; }
     .team-col .name { font-size: 12px; font-weight: bold; margin-top: 4px; }
     .score-box { font-size: 24px; font-weight: 900; color: #fff; flex: 0.8; text-align: center; letter-spacing: 2px; }
     .section-card { background: #161b26; border-radius: 14px; padding: 16px; margin-bottom: 12px; border: 1px solid rgba(255,255,255,0.05); }
@@ -34,6 +34,7 @@
     .pitch-center-circle { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); width: 70px; height: 70px; border: 2px solid rgba(255,255,255,0.6); border-radius: 50%; }
     .pitch-box-top { position: absolute; top: 0; left: 20%; right: 20%; height: 16%; border: 2px solid rgba(255,255,255,0.6); border-top: none; }
     .pitch-box-bottom { position: absolute; bottom: 0; left: 20%; right: 20%; height: 16%; border: 2px solid rgba(255,255,255,0.6); border-bottom: none; }
+    .pitch-empty-msg { position: absolute; top: 50%; left: 50%; transform: translate(-50%, -50%); background: rgba(0,0,0,0.85); padding: 14px 18px; border-radius: 10px; font-size: 12px; text-align: center; color: #f1c40f; border: 1px solid rgba(241,196,15,0.3); z-index: 10; width: 85%; }
     .formation-row { position: relative; z-index: 2; display: flex; justify-content: space-around; align-items: center; width: 100%; }
     .player-node { display: flex; flex-direction: column; align-items: center; width: 70px; }
     .player-avatar-wrap { position: relative; width: 44px; height: 44px; display: flex; align-items: center; justify-content: center; }
@@ -91,7 +92,7 @@
         <div class="team-col"><img id="m-away-logo" src=""><div class="name" id="m-away-name">Away</div></div>
       </div>
     </div>
-    <div class="section-card" id="timeline-section">
+    <div class="section-card" id="timeline-section" style="display:none;">
       <div class="section-title">⏱️ เหตุการณ์สำคัญในเกม</div>
       <div class="timeline-container" id="timeline-list"><div class="timeline-line"></div></div>
     </div>
@@ -104,6 +105,10 @@
       <div class="pitch-capture-area" id="pitch-capture-zone">
         <div class="pitch-container" id="pitch-board">
           <div class="pitch-box-top"></div><div class="pitch-center-circle"></div><div class="pitch-center-line"></div><div class="pitch-box-bottom"></div>
+          <div id="pitch-no-lineup" class="pitch-empty-msg" style="display:none;">
+            ⏳ สโมสรยังไม่ประกาศรายชื่อ 11 ตัวจริงทางการ<br>
+            <span style="font-size:10px; color:#a0aec0; margin-top:4px; display:block;">(มักประกาศ 45–60 นาทีก่อนเริ่มแข่งขัน)</span>
+          </div>
         </div>
       </div>
       <div class="pitch-action-bar">
@@ -111,7 +116,7 @@
         <button class="action-btn btn-share" onclick="shareCurrentMatch()">📤 แชร์ผังนี้ให้เพื่อน</button>
       </div>
     </div>
-    <div class="section-card" id="stats-section"><div class="section-title">📊 สถิติเกมสด</div><div id="stats-list"></div></div>
+    <div class="section-card" id="stats-section" style="display:none;"><div class="section-title">📊 สถิติเกมสด</div><div id="stats-list"></div></div>
   </div>
 
   <div id="view-standings" class="tab-view">
@@ -151,7 +156,6 @@
       try {
         await liff.init({ liffId: LIFF_ID });
 
-        // ระบบจับ URL แบบแข็งแกร่ง 100%
         let urlParams = new URLSearchParams(window.location.search);
         let params = urlParams;
         if (urlParams.has('liff.state')) {
@@ -160,11 +164,10 @@
           params = new URLSearchParams(cleanState);
         }
 
-        // ตรวจจับการกดปุ่มแชร์การ์ด
         if (params.has('t') && params.has('hn')) {
           document.getElementById("loader-text").innerText = "กำลังเปิดหน้าต่างส่งให้เพื่อน...";
           await executeDirectShare(params);
-          return; // หยุดการโหลดหน้าผังทันที
+          return;
         }
 
         currentMatchId = params.get('id') || "700500";
@@ -174,7 +177,7 @@
         else if (typeParam === 'fixtures') { switchTab('fixtures'); loadMatchDetails(currentMatchId); }
         else { switchTab('match'); await loadMatchDetails(currentMatchId); }
       } catch (err) {
-        document.getElementById("loader").innerHTML = `<p style="color:#e74c3c;">Error: ${err.message}</p>`;
+        document.getElementById("loader").innerHTML = `<p style="color:#e74c3c;">เกิดข้อผิดพลาด: ${err.message}</p>`;
       }
     }
 
@@ -273,15 +276,26 @@
         const h = comp.competitors.find(c => c.homeAway === "home"), a = comp.competitors.find(c => c.homeAway === "away");
         homeTeamId = h.id; awayTeamId = a.id;
         
-        document.getElementById("m-status").innerText = matchData.header.league.name + " • " + (matchData.header.status.type.detail || "");
-        document.getElementById("m-home-name").innerText = h.team.shortDisplayName; document.getElementById("m-home-logo").src = h.team.logos[0].href;
-        document.getElementById("m-away-name").innerText = a.team.shortDisplayName; document.getElementById("m-away-logo").src = a.team.logos[0].href;
-        document.getElementById("btn-team-h").innerText = `🏠 ${h.team.shortDisplayName}`; document.getElementById("btn-team-a").innerText = `✈️ ${a.team.shortDisplayName}`;
+        // ปลอดภัยต่อโลโก้และชื่อทีม (ไม่มีบั๊ก undefined)
+        const getLogo = (t) => (t.team.logos && t.team.logos[0]) ? t.team.logos[0].href : (t.team.logo || "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png");
+        const getName = (t) => t.team.shortDisplayName || t.team.displayName || t.team.name || "Team";
+
+        const hName = getName(h), aName = getName(a);
+        document.getElementById("m-status").innerText = matchData.header.league.name + " • " + (matchData.header.status ? matchData.header.status.type.detail : "");
+        document.getElementById("m-home-name").innerText = hName; document.getElementById("m-home-logo").src = getLogo(h);
+        document.getElementById("m-away-name").innerText = aName; document.getElementById("m-away-logo").src = getLogo(a);
+        document.getElementById("btn-team-h").innerText = `🏠 ${hName}`; document.getElementById("btn-team-a").innerText = `✈️ ${aName}`;
         document.getElementById("m-score-val").innerText = h.score !== undefined ? `${h.score} - ${a.score}` : "VS";
         
-        renderTimeline(); await renderTeamPitch("home"); renderStats();
+        renderTimeline(); 
+        await renderTeamPitch("home"); 
+        renderStats();
+
         document.getElementById("loader").style.display = "none";
-      } catch(e) { document.getElementById("loader").innerHTML = `<p style="color:#e74c3c;">Error</p>`; }
+        document.getElementById("view-match").style.display = "block";
+      } catch(e) { 
+        document.getElementById("loader").innerHTML = `<p style="color:#e74c3c;">ไม่พบข้อมูลแมตช์นี้ (ID: ${mId})</p>`; 
+      }
     }
 
     function renderTimeline() {
@@ -308,9 +322,26 @@
       currentSide = side;
       document.getElementById("btn-team-h").className = side === "home" ? "team-chip active" : "team-chip";
       document.getElementById("btn-team-a").className = side === "away" ? "team-chip active" : "team-chip";
-      const pitch = document.getElementById("pitch-board"); pitch.querySelectorAll(".formation-row").forEach(r => r.remove());
+      const pitch = document.getElementById("pitch-board"); 
+      pitch.querySelectorAll(".formation-row").forEach(r => r.remove());
+
+      const noLineupMsg = document.getElementById("pitch-no-lineup");
+
+      // ตรวจสอบอย่างปลอดภัยว่ามีผังผู้เล่นหรือไม่
+      if (!matchData.rosters || matchData.rosters.length === 0) {
+        noLineupMsg.style.display = "block";
+        return;
+      }
+
       const rObj = matchData.rosters.find(r => r.homeAway === side) || matchData.rosters[0];
-      const starters = (rObj.roster || []).filter(p => p.starter); if(!starters.length) return;
+      const starters = (rObj && rObj.roster) ? rObj.roster.filter(p => p.starter) : [];
+      
+      if (starters.length === 0) {
+        noLineupMsg.style.display = "block";
+        return;
+      }
+      noLineupMsg.style.display = "none";
+
       await fetchWikipediaPhotos(starters.map(p => p.athlete ? p.athlete.displayName : ""));
       
       const counts = [1, ...(rObj.formation || "4-3-3").split('-').map(n => parseInt(n))].reverse();
@@ -319,7 +350,7 @@
         const row = document.createElement("div"); row.className = "formation-row";
         starters.slice(idx, idx + c).forEach(p => {
           const isGK = rIdx === counts.length - 1;
-          const pId = p.athlete ? p.athlete.id : null, name = p.athlete ? p.athlete.shortName : p.jersey, num = p.jersey || "-";
+          const pId = p.athlete ? p.athlete.id : null, name = p.athlete ? (p.athlete.shortName || p.athlete.displayName) : p.jersey, num = p.jersey || "-";
           const bg = isGK ? "#f1c40f" : (side==="away" ? "#3498db" : "#00ff85"), color = isGK ? "#000" : (side==="away" ? "#fff" : "#000");
           const disc = isGK ? "player-disc gk" : (side==="away" ? "player-disc away" : "player-disc home");
           const url = (p.athlete && playerPhotoCache[p.athlete.displayName]) || (pId ? `https://a.espncdn.com/combiner/i?img=/i/headshots/soccer/players/full/${pId}.png&w=120&h=120` : "");
@@ -334,7 +365,9 @@
 
     function renderStats() {
       const c = document.getElementById("stats-list"); c.innerHTML = "";
-      if(!matchData.boxscore || !matchData.boxscore.teams) { document.getElementById("stats-section").style.display = "none"; return; }
+      if(!matchData.boxscore || !matchData.boxscore.teams || matchData.boxscore.teams.length < 2) { 
+        document.getElementById("stats-section").style.display = "none"; return; 
+      }
       document.getElementById("stats-section").style.display = "block";
       const h = matchData.boxscore.teams.find(t => t.homeAway === "home"), a = matchData.boxscore.teams.find(t => t.homeAway === "away");
       const getV = (obj, n) => { const s = (obj.statistics||[]).find(st => st.name === n); return s ? parseFloat(s.displayValue) : 0; };
