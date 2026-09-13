@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Premier League Hub</title>
+  <title>Football Match Center</title>
   <script charset="utf-8" src="https://static.line-scdn.net/liff/edge/2/sdk.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
   <style>
@@ -94,7 +94,7 @@
   <!-- VIEW: MATCH CENTER -->
   <div id="view-match" class="tab-view active" style="display: none;">
     <div class="match-header">
-      <div class="status-badge" id="m-status">PREMIER LEAGUE</div>
+      <div class="status-badge" id="m-status">FOOTBALL MATCH</div>
       <div class="score-row">
         <div class="team-col"><img id="m-home-logo" src=""><div class="name" id="m-home-name">Home</div></div>
         <div class="score-box" id="m-score-val">VS</div>
@@ -159,7 +159,7 @@
   <!-- VIEW: FIXTURES -->
   <div id="view-fixtures" class="tab-view">
     <div class="section-card">
-      <div class="section-title">📅 แมตช์วันนี้ & ผลบอลสด</div>
+      <div class="section-title">📅 แมตช์วันนี้ & ผลบอลสด (Premier League)</div>
       <div id="fixtures-list"></div>
     </div>
   </div>
@@ -169,6 +169,7 @@
     let matchData = null; 
     let homeTeamId = null, awayTeamId = null; 
     let currentMatchId = "700500"; 
+    let currentLeagueSlug = "eng.1";
     let currentSide = "home";
     const playerPhotoCache = {}; 
     let standingsLoaded = false; 
@@ -202,24 +203,25 @@
         }
 
         currentMatchId = params.get('id') || "700500";
+        currentLeagueSlug = params.get('lg') || "eng.1";
         const typeParam = params.get('type');
         
         if (typeParam === 'standings') { 
           switchTab('standings'); 
-          loadMatchDetails(currentMatchId); 
+          loadMatchDetails(currentMatchId, currentLeagueSlug); 
         } else if (typeParam === 'fixtures') { 
           switchTab('fixtures'); 
-          loadMatchDetails(currentMatchId); 
+          loadMatchDetails(currentMatchId, currentLeagueSlug); 
         } else { 
           switchTab('match'); 
-          await loadMatchDetails(currentMatchId); 
+          await loadMatchDetails(currentMatchId, currentLeagueSlug); 
         }
       } catch (err) {
         document.getElementById("loader").innerHTML = `<p style="color:#e74c3c;">เกิดข้อผิดพลาด: ${err.message}</p>`;
       }
     }
 
-    // ================= ฟังก์ชันส่งต่อการ์ด (แยกประเภทแม่นยำ 100%) =================
+    // ================= ส่งต่อการ์ด (รองรับทุกลีก ไม่หลุด) =================
     async function executeDirectShare(params) {
       if (!liff.isApiAvailable("shareTargetPicker")) {
         alert("กรุณาเปิดลิงก์ในแอป LINE เพื่อใช้งานฟังก์ชันแชร์");
@@ -237,6 +239,7 @@
       const rawSa = params.get('sa') || "";
       const detail = params.get('dt') || "";
       const mId = params.get('id') || currentMatchId;
+      const leagueSlug = params.get('lg') || currentLeagueSlug || "eng.1";
 
       let centerText = "VS";
       if (rawSh !== "" && rawSh !== "VS" && rawSa !== "" && rawSa !== "VS") {
@@ -247,13 +250,12 @@
       let eventsObj = null;
       let venueName = "";
 
-      // เช็กประเภทการ์ดอย่างเข้มงวด
       const isLineupCard = (detail === "STARTING LINEUPS") || title.includes("11 ตัวจริง");
       const isGoalCard = title.includes("GOAL");
       const isSummaryCard = title.includes("TIME") || detail.includes("SUMMARY") || detail.includes("EVENTS");
 
       try {
-        const res = await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/eng.1/summary?event=${mId}&t=${Date.now()}`);
+        const res = await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/${leagueSlug}/summary?event=${mId}&t=${Date.now()}`);
         const data = await res.json();
         const comp = data.header && data.header.competitions && data.header.competitions[0];
         
@@ -279,7 +281,6 @@
           }
         }
 
-        // 1. ผัง 11 ตัวจริงจะดึงเฉพาะการ์ดพรีวิวเท่านั้น
         if (isLineupCard && data.rosters && data.rosters.length >= 2) {
           const hRoster = data.rosters.find(r => r.homeAway === "home") || data.rosters[0];
           const aRoster = data.rosters.find(r => r.homeAway === "away") || data.rosters[1];
@@ -296,7 +297,6 @@
           lineupObj = { homeStarters: parseS(hRoster), awayStarters: parseS(aRoster) };
         }
 
-        // 2. เหตุการณ์ในเกมจะดึงเฉพาะการ์ด Goal หรือ Summary
         if ((isGoalCard || isSummaryCard) && data.keyEvents) {
           const homeEvts = [];
           const awayEvts = [];
@@ -365,7 +365,7 @@
               "flex": 3,
               "contents": [
                 { "type": "text", "text": centerText, "size": "lg", "weight": "bold", "align": "center", "color": "#ffffff" },
-                { "type": "text", "text": "PL", "size": "xxs", "color": "#aaaaaa" }
+                { "type": "text", "text": "MATCH", "size": "xxs", "color": "#aaaaaa" }
               ]
             },
             {
@@ -505,7 +505,7 @@
             "contents": [
               {
                 "type": "button", "style": "primary", "height": "sm", "color": "#1b5e20",
-                "action": { "type": "uri", "label": "🏟️ ผัง 11 ตัวจริง 2D", "uri": `https://liff.line.me/${LIFF_ID}?id=${mId}` }
+                "action": { "type": "uri", "label": "🏟️ ผัง 11 ตัวจริง 2D", "uri": `https://liff.line.me/${LIFF_ID}?id=${mId}&lg=${leagueSlug}` }
               },
               {
                 "type": "button", "style": "secondary", "height": "sm", "color": "#232a3b",
@@ -538,9 +538,9 @@
           "body": {
             "type": "box", "layout": "vertical", "backgroundColor": "#161b26", "paddingAll": "16px",
             "contents": [
-              { "type": "text", "text": "PREMIER LEAGUE MATCH CENTER", "size": "xxs", "color": "#00ff85", "weight": "bold" },
+              { "type": "text", "text": (matchData.header.league ? matchData.header.league.name : "MATCH CENTER").toUpperCase(), "size": "xxs", "color": "#00ff85", "weight": "bold" },
               { "type": "text", "text": `${hTeam.team.name} ${score} ${aTeam.team.name}`, "size": "md", "color": "#ffffff", "weight": "bold", "margin": "md" },
-              { "type": "button", "style": "primary", "color": "#38003c", "margin": "lg", "action": { "type": "uri", "label": "🏟️ ดูผัง 11 ตัวจริง 2D สด", "uri": `https://liff.line.me/${LIFF_ID}?id=${currentMatchId}` } }
+              { "type": "button", "style": "primary", "color": "#38003c", "margin": "lg", "action": { "type": "uri", "label": "🏟️ ดูผัง 11 ตัวจริง 2D สด", "uri": `https://liff.line.me/${LIFF_ID}?id=${currentMatchId}&lg=${currentLeagueSlug}` } }
             ]
           }
         }
@@ -563,10 +563,10 @@
       } catch(e) {}
     }
 
-    async function loadMatchDetails(mId) {
+    async function loadMatchDetails(mId, leagueSlug = "eng.1") {
       document.getElementById("loader").style.display = "block";
       try {
-        const res = await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/eng.1/summary?event=${mId}&t=${Date.now()}`);
+        const res = await fetch(`https://site.web.api.espn.com/apis/site/v2/sports/soccer/${leagueSlug}/summary?event=${mId}&t=${Date.now()}`);
         matchData = await res.json();
         const comp = matchData.header.competitions[0];
         const h = comp.competitors.find(c => c.homeAway === "home"), a = comp.competitors.find(c => c.homeAway === "away");
@@ -816,7 +816,7 @@
           const h = evt.competitions[0].competitors.find(c=>c.homeAway==="home"), a = evt.competitions[0].competitors.find(c=>c.homeAway==="away");
           const state = evt.status.type.state, badge = state==="in" ? `<span class="f-status" style="color:#e74c3c">🔴 LIVE</span>` : `<span class="f-status">${evt.status.type.shortDetail}</span>`;
           const c = document.createElement("div"); c.className = "fixture-card";
-          c.onclick = () => { currentMatchId = evt.id; switchTab('match'); loadMatchDetails(evt.id); };
+          c.onclick = () => { currentMatchId = evt.id; currentLeagueSlug = "eng.1"; switchTab('match'); loadMatchDetails(evt.id, "eng.1"); };
           c.innerHTML = `<div class="f-team"><img src="${h.team.logo}"><span>${h.team.shortDisplayName}</span></div><div class="f-center"><div class="f-score">${state==="pre"?"VS":`${h.score}-${a.score}`}</div>${badge}</div><div class="f-team away"><span>${a.team.shortDisplayName}</span><img src="${a.team.logo}"></div>`;
           list.appendChild(c);
         });
