@@ -146,7 +146,10 @@
   <!-- VIEW: STANDINGS -->
   <div id="view-standings" class="tab-view">
     <div class="section-card">
-      <div class="section-title">🏆 ตารางคะแนนพรีเมียร์ลีก</div>
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:14px;">
+        <div class="section-title" style="margin-bottom:0;">🏆 ตารางคะแนนพรีเมียร์ลีก</div>
+        <button class="action-btn btn-share" style="max-width:130px; padding:6px 10px; font-size:11px;" onclick="shareStandingsFromApi()">📤 แชร์ให้เพื่อน</button>
+      </div>
       <div class="table-responsive">
         <table class="standings-tbl">
           <thead><tr><th style="width:25px;">#</th><th>สโมสร</th><th>แข่ง</th><th>+/-</th><th style="color:#00ff85;">แต้ม</th></tr></thead>
@@ -196,6 +199,16 @@
           params = new URLSearchParams(cleanState);
         }
 
+        // กรณีเป็นคำสั่งแชร์ตารางคะแนน
+        const typeParam = params.get('type');
+        const actionParam = params.get('action');
+        if (actionParam === 'share_standings' || typeParam === 'standings' || typeParam === 'share_standings') {
+          document.getElementById("loader-text").innerText = "กำลังจัดเตรียมตารางคะแนนเพื่อส่งต่อ...";
+          await shareStandingsFromApi();
+          return;
+        }
+
+        // กรณีเป็นคำสั่งแชร์การ์ดแมตช์
         if (params.has('t') && params.has('hn')) {
           document.getElementById("loader-text").innerText = "กำลังจัดเตรียมการ์ดเพื่อส่งต่อ...";
           await executeDirectShare(params);
@@ -204,9 +217,8 @@
 
         currentMatchId = params.get('id') || "700500";
         currentLeagueSlug = params.get('lg') || "eng.1";
-        const typeParam = params.get('type');
         
-        if (typeParam === 'standings') { 
+        if (typeParam === 'view_standings') { 
           switchTab('standings'); 
           loadMatchDetails(currentMatchId, currentLeagueSlug); 
         } else if (typeParam === 'fixtures') { 
@@ -221,7 +233,111 @@
       }
     }
 
-    // ================= ส่งต่อการ์ด (รองรับทุกลีก ไม่หลุด) =================
+    // ================= ระบบแชร์ตารางคะแนนสดเข้า LINE =================
+    async function shareStandingsFromApi() {
+      if (!liff.isApiAvailable("shareTargetPicker")) {
+        alert("กรุณาเปิดลิงก์ในแอป LINE เพื่อใช้งานฟังก์ชันแชร์");
+        switchTab('standings');
+        document.getElementById("loader").style.display = "none";
+        return;
+      }
+
+      try {
+        const res = await fetch("https://site.web.api.espn.com/apis/v2/sports/soccer/eng.1/standings");
+        const data = await res.json();
+        const entries = (data.children && data.children[0] && data.children[0].standings && data.children[0].standings.entries) || [];
+
+        if (entries.length === 0) {
+          alert("ไม่สามารถดึงข้อมูลตารางคะแนนได้ในขณะนี้");
+          liff.closeWindow();
+          return;
+        }
+
+        const teams = entries.map((e, index) => {
+          const getStat = (name) => {
+            const s = (e.stats || []).find(st => st.name === name || st.type === name);
+            return s ? s.displayValue || s.value : "0";
+          };
+          return {
+            rank: (index + 1).toString(),
+            name: e.team.shortDisplayName || e.team.displayName || e.team.name,
+            logo: (e.team.logos && e.team.logos[0]) ? e.team.logos[0].href : "https://a.espncdn.com/i/leaguelogos/soccer/500/23.png",
+            played: getStat("gamesPlayed"),
+            diff: getStat("pointDifferential") || getStat("goalDifference"),
+            points: getStat("points")
+          };
+        });
+
+        const buildBubble = (headerTitle, teamSlice) => {
+          const rows = teamSlice.map(t => {
+            const rankNum = parseInt(t.rank, 10);
+            let rankColor = "#555555";
+            if (rankNum <= 4) rankColor = "#2980b9";
+            if (rankNum >= 18) rankColor = "#c0392b";
+
+            const diffVal = parseInt(t.diff, 10);
+            const diffStr = diffVal > 0 ? `+${diffVal}` : t.diff.toString();
+
+            return {
+              "type": "box", "layout": "horizontal", "alignItems": "center", "margin": "sm",
+              "contents": [
+                { "type": "text", "text": t.rank, "size": "xxs", "weight": "bold", "color": rankColor, "flex": 1, "align": "center" },
+                { "type": "image", "url": t.logo, "size": "14px", "aspectMode": "fit", "flex": 1 },
+                { "type": "text", "text": t.name, "size": "xxs", "weight": "bold", "color": "#ffffff", "flex": 4, "wrap": false },
+                { "type": "text", "text": t.played.toString(), "size": "xxs", "color": "#7f8c8d", "flex": 1, "align": "center" },
+                { "type": "text", "text": diffStr, "size": "xxs", "color": "#7f8c8d", "flex": 1, "align": "center" },
+                { "type": "text", "text": t.points.toString(), "size": "xxs", "weight": "bold", "color": "#00ff85", "flex": 1, "align": "center" }
+              ]
+            };
+          });
+
+          return {
+            "type": "bubble", "size": "kilo",
+            "header": { "type": "box", "layout": "vertical", "backgroundColor": "#3d195b", "contents": [ { "type": "text", "text": headerTitle, "color": "#00ff85", "weight": "bold", "size": "xs", "align": "center" } ] },
+            "body": {
+              "type": "box", "layout": "vertical", "backgroundColor": "#161b26",
+              "contents": [
+                { "type": "box", "layout": "horizontal", "contents": [
+                  { "type": "text", "text": "#", "size": "xxs", "color": "#95a5a6", "weight": "bold", "flex": 1, "align": "center" },
+                  { "type": "text", "text": " ", "flex": 1 },
+                  { "type": "text", "text": "สโมสร", "size": "xxs", "color": "#95a5a6", "weight": "bold", "flex": 4 },
+                  { "type": "text", "text": "แข่ง", "size": "xxs", "color": "#95a5a6", "weight": "bold", "flex": 1, "align": "center" },
+                  { "type": "text", "text": "+/-", "size": "xxs", "color": "#95a5a6", "weight": "bold", "flex": 1, "align": "center" },
+                  { "type": "text", "text": "แต้ม", "size": "xxs", "color": "#95a5a6", "weight": "bold", "flex": 1, "align": "center" }
+                ]},
+                { "type": "separator", "margin": "xs", "color": "#ffffff22" },
+                ...rows
+              ]
+            },
+            "footer": {
+              "type": "box", "layout": "vertical", "backgroundColor": "#161b26",
+              "contents": [
+                { "type": "button", "style": "secondary", "height": "sm", "color": "#232a3b", "action": { "type": "uri", "label": "แชร์ตารางคะแนน ↗️", "uri": `https://liff.line.me/${LIFF_ID}?action=share_standings` } }
+              ]
+            }
+          };
+        };
+
+        const card1 = buildBubble("🏆 PL STANDINGS (1 - 10)", teams.slice(0, 10));
+        const card2 = buildBubble("🏆 PL STANDINGS (11 - 20)", teams.slice(10, 20));
+
+        const flexMsg = {
+          type: "flex",
+          altText: "อัปเดตตารางคะแนนพรีเมียร์ลีกครบ 20 อันดับ",
+          contents: {
+            type: "carousel",
+            contents: [card1, card2]
+          }
+        };
+
+        await liff.shareTargetPicker([flexMsg]);
+        liff.closeWindow();
+      } catch (err) {
+        liff.closeWindow();
+      }
+    }
+
+    // ================= ส่งต่อการ์ดแมตช์ =================
     async function executeDirectShare(params) {
       if (!liff.isApiAvailable("shareTargetPicker")) {
         alert("กรุณาเปิดลิงก์ในแอป LINE เพื่อใช้งานฟังก์ชันแชร์");
@@ -448,7 +564,10 @@
         });
 
         const homeRows = eventsObj.homeEvents.map(e => ({
-          "type": "box", "layout": "horizontal", "alignItems": "center", "spacing": "xs",
+          "type": "box",
+          "layout": "horizontal",
+          "alignItems": "center",
+          "spacing": "xs",
           "contents": [
             { "type": "text", "text": e.icon, "size": "xxs", "flex": 0 },
             { "type": "text", "text": e.clock, "size": "xxs", "color": "#00ff85", "weight": "bold", "flex": 0 },
@@ -457,7 +576,11 @@
         }));
 
         const awayRows = eventsObj.awayEvents.map(e => ({
-          "type": "box", "layout": "horizontal", "alignItems": "center", "spacing": "xs", "justifyContent": "flex-end",
+          "type": "box",
+          "layout": "horizontal",
+          "alignItems": "center",
+          "spacing": "xs",
+          "justifyContent": "flex-end",
           "contents": [
             { "type": "text", "text": e.name, "size": "xxs", "color": "#ffffff", "weight": "bold", "wrap": true, "align": "end", "flex": 1 },
             { "type": "text", "text": e.clock, "size": "xxs", "color": "#3498db", "weight": "bold", "flex": 0, "align": "end" },
@@ -516,12 +639,8 @@
         }
       };
 
-      try {
-        const res = await liff.shareTargetPicker([flexMsg]);
-        if (res) liff.closeWindow(); else liff.closeWindow();
-      } catch (e) {
-        liff.closeWindow();
-      }
+      await liff.shareTargetPicker([flexMsg]);
+      liff.closeWindow();
     }
 
     async function shareCurrentMatch() {
